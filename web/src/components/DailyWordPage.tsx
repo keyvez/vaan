@@ -1,20 +1,74 @@
-import { useState, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
-import { Calendar, Share2, Download, Facebook, Twitter, Linkedin } from 'lucide-react';
-import { dailySanskritWords } from '../lib/sanskrit-data';
+import { SEO } from './SEO';
+import { Calendar, Share2, Download, Facebook, Twitter, Linkedin, Loader2 } from 'lucide-react';
+import { toPng, getFontEmbedCSS } from 'html-to-image';
+
+const DEFAULT_WORD_API_ENDPOINT = 'https://vaan-wordlist.keyvez.workers.dev/api/word-of-day';
+const WORD_API_ENDPOINT =
+  import.meta.env.VITE_WORD_API_ENDPOINT?.trim() || DEFAULT_WORD_API_ENDPOINT;
+
+type DailyWord = {
+  id: number;
+  word: string;
+  transliteration?: string | null;
+  primaryMeaning: string;
+  meanings: string[];
+  partOfSpeech?: string | null;
+  hindiMeaning?: string | null;
+  tags?: string[];
+};
 
 export function DailyWordPage() {
   const { t } = useTranslation();
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [word, setWord] = useState<DailyWord | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
 
-  const word = dailySanskritWords[currentIndex];
+  const fetchWord = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch(WORD_API_ENDPOINT, {
+        headers: { Accept: 'application/json' }
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to fetch word: ${response.status}`);
+      }
+      const payload = await response.json();
+      const normalized = normalizePayload(payload);
+      setWord(normalized);
+    } catch (err) {
+      console.error('Unable to fetch word of the day', err);
+      setError('Unable to fetch the word of the day. Please try again.');
+      setWord(null);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchWord();
+  }, [fetchWord]);
+
+  const additionalMeanings = useMemo(() => {
+    if (!word) return [];
+    return word.meanings.filter(
+      (meaning) => meaning && meaning.toLowerCase() !== word.primaryMeaning.toLowerCase()
+    );
+  }, [word]);
+
+  const disabledInteractions = loading || !word;
 
   const handleShare = async (platform: string) => {
+    if (!word) return;
+
     const shareUrl = `https://vaan.pages.dev/daily-word`;
-    const shareText = `Today's Sanskrit Word: ${word.transliteration} (${word.meaning})`;
+    const shareText = `Today's Sanskrit Word: ${word.word} (${word.primaryMeaning})`;
 
     const urls: { [key: string]: string } = {
       facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`,
@@ -28,166 +82,165 @@ export function DailyWordPage() {
     }
   };
 
-  const handleDownload = () => {
-    // Create a canvas to draw the card
-    const canvas = document.createElement('canvas');
-    canvas.width = 1080;
-    canvas.height = 1080;
-    const ctx = canvas.getContext('2d');
-    
-    if (!ctx) return;
+  const handleDownload = async () => {
+    if (!word || !cardRef.current) return;
 
-    // Draw white background
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, 1080, 1080);
+    try {
+      await document.fonts.ready;
+      const node = cardRef.current;
+      const backgroundColor = window.getComputedStyle(node).backgroundColor || '#ffffff';
+      const fontEmbedCSS = await getFontEmbedCSS(node);
 
-    // Draw border
-    ctx.strokeStyle = '#000000';
-    ctx.lineWidth = 4;
-    ctx.strokeRect(40, 40, 1000, 1000);
+      const dataUrl = await toPng(node, {
+        cacheBust: true,
+        pixelRatio: Math.max(2, window.devicePixelRatio || 1),
+        fontEmbedCSS,
+        style: {
+          backgroundColor,
+          width: `${node.offsetWidth}px`
+        }
+      });
 
-    // Draw Sanskrit word
-    ctx.fillStyle = '#000000';
-    ctx.font = 'bold 120px serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(word.word, 540, 300);
-
-    // Draw transliteration
-    ctx.font = '60px serif';
-    ctx.fillText(word.transliteration, 540, 400);
-
-    // Draw pronunciation
-    ctx.font = 'italic 40px serif';
-    ctx.fillStyle = '#666666';
-    ctx.fillText(`(${word.pronunciation})`, 540, 480);
-
-    // Draw meaning
-    ctx.fillStyle = '#000000';
-    ctx.font = 'bold 50px serif';
-    ctx.fillText(word.meaning, 540, 600);
-
-    // Draw story (multi-line)
-    ctx.font = '32px serif';
-    ctx.fillStyle = '#333333';
-    const words = word.story.split(' ');
-    let line = '';
-    let y = 720;
-    const maxWidth = 900;
-
-    for (let i = 0; i < words.length; i++) {
-      const testLine = line + words[i] + ' ';
-      const metrics = ctx.measureText(testLine);
-      if (metrics.width > maxWidth && i > 0) {
-        ctx.fillText(line, 540, y);
-        line = words[i] + ' ';
-        y += 45;
-      } else {
-        line = testLine;
-      }
+      const anchor = document.createElement('a');
+      anchor.href = dataUrl;
+      anchor.download = `sanskrit-word-${word.word}.png`;
+      anchor.click();
+    } catch (exportError) {
+      console.error('Failed to download card preview', exportError);
+      setError('Unable to download the card. Please try again.');
     }
-    ctx.fillText(line, 540, y);
-
-    // Draw footer
-    ctx.font = '30px serif';
-    ctx.fillStyle = '#999999';
-    ctx.fillText('vaan.pages.dev', 540, 1000);
-
-    // Download
-    canvas.toBlob((blob) => {
-      if (blob) {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `sanskrit-word-${word.transliteration}.png`;
-        a.click();
-        URL.revokeObjectURL(url);
-      }
-    });
   };
 
-  return (
-    <div className="min-h-screen py-12">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-12">
-          <div className="inline-flex items-center justify-center w-16 h-16 border-2 border-foreground mb-4">
-            <Calendar className="h-8 w-8" />
-          </div>
-          <h1 className="mb-4">{t('daily.title')}</h1>
-          <p className="text-muted-foreground">
-            One Sanskrit word a day - Learn, Share, Inspire
-          </p>
-        </div>
+  const ogImageUrl = word
+    ? `https://vaan-og-images.keyvez.workers.dev/word/${word.id}?` +
+      `sanskrit=${encodeURIComponent(word.word)}&` +
+      `transliteration=${encodeURIComponent(word.transliteration || '')}&` +
+      `meaning=${encodeURIComponent(word.primaryMeaning)}`
+    : 'https://vaan-og-images.keyvez.workers.dev/word/0?sanskrit=Sanskrit&transliteration=sanskrit&meaning=Ancient%20language';
+  const pageTitle = word
+    ? `${word.word} - Daily Sanskrit Word | Vaan`
+    : 'Daily Sanskrit Word | Vaan';
+  const pageDescription = word
+    ? `${word.word} (${word.transliteration || word.word}) - ${word.primaryMeaning}. Learn a new Sanskrit word every day.`
+    : 'Learn a new Sanskrit word every day with pronunciation, meaning, and cultural context.';
 
-        {/* Word Card */}
-        <Card ref={cardRef} className="p-12 mb-8 border-2 border-foreground">
+  return (
+    <>
+      <SEO
+        title={pageTitle}
+        description={pageDescription}
+        image={ogImageUrl}
+        url="/daily-word"
+      />
+      <div className="min-h-screen py-12">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center justify-center w-16 h-16 border-2 border-foreground mb-4">
+              <Calendar className="h-8 w-8" />
+            </div>
+            <h1 className="mb-4">{t('daily.title')}</h1>
+            <p className="text-muted-foreground">
+              One Sanskrit word a day - Learn, Share, Inspire
+            </p>
+          </div>
+
+        <Card ref={cardRef} className="p-12 mb-8 border-2 border-foreground min-h-[420px]">
           <div className="text-center space-y-6">
-            <div className="text-6xl md:text-7xl mb-4">
-              {word.word}
-            </div>
-            
-            <div className="text-3xl">
-              {word.transliteration}
-            </div>
-            
-            <div className="text-xl italic text-muted-foreground">
-              ({word.pronunciation})
-            </div>
-            
-            <div className="py-6 border-t border-b border-border">
-              <div className="text-sm text-muted-foreground mb-2">
-                {t('daily.meaning')}
+            {loading && (
+              <div className="flex flex-col items-center justify-center gap-4">
+                <Loader2 className="h-10 w-10 animate-spin" />
+                <p className="text-muted-foreground text-sm">Fetching a fresh Sanskrit word...</p>
               </div>
-              <div className="text-2xl">
-                {word.meaning}
+            )}
+
+            {!loading && word && (
+              <>
+                <div className="text-6xl md:text-7xl mb-4 break-words">
+                  {word.word}
+                </div>
+
+                {word.transliteration && (
+                  <div className="text-3xl break-words">
+                    {word.transliteration}
+                  </div>
+                )}
+
+                {word.partOfSpeech && (
+                  <div className="text-sm uppercase tracking-[0.3em] text-muted-foreground">
+                    {word.partOfSpeech}
+                  </div>
+                )}
+
+                <div className="py-6 border-t border-b border-border">
+                  <div className="text-sm text-muted-foreground mb-2">
+                    {t('daily.meaning')}
+                  </div>
+                  <div className="text-2xl">
+                    {word.primaryMeaning}
+                  </div>
+                </div>
+
+                {additionalMeanings.length > 0 && (
+                  <div className="text-left max-w-2xl mx-auto">
+                    <div className="text-sm text-muted-foreground mb-2">
+                      Additional meanings
+                    </div>
+                    <ul className="text-muted-foreground space-y-1 list-disc list-inside">
+                      {additionalMeanings.map((meaning) => (
+                        <li key={meaning}>{meaning}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {word.hindiMeaning && (
+                  <div className="text-sm text-muted-foreground">
+                    Hindi: <span className="text-foreground">{word.hindiMeaning}</span>
+                  </div>
+                )}
+              </>
+            )}
+
+            {!loading && !word && (
+              <div className="text-muted-foreground text-sm">
+                {error ?? 'No word available right now.'}
               </div>
-            </div>
-            
-            <div className="text-left max-w-2xl mx-auto">
-              <div className="text-sm text-muted-foreground mb-2">
-                {t('daily.story')}
+            )}
+
+            {error && (
+              <div className="text-sm text-red-500">
+                {error}
               </div>
-              <p className="text-muted-foreground">
-                {word.story}
-              </p>
-            </div>
+            )}
           </div>
         </Card>
 
-        {/* Navigation */}
-        <div className="flex justify-center gap-4 mb-8">
+        <div className="flex flex-col items-center gap-4 mb-8 sm:flex-row sm:justify-center">
           <Button
             variant="outline"
-            onClick={() => setCurrentIndex((prev) => Math.max(0, prev - 1))}
-            disabled={currentIndex === 0}
+            onClick={fetchWord}
             className="border-foreground"
+            disabled={loading}
           >
-            Previous
+            {loading ? 'Refreshing…' : 'Get another word'}
           </Button>
-          <span className="flex items-center px-4 text-sm text-muted-foreground">
-            {currentIndex + 1} / {dailySanskritWords.length}
+          <span className="text-xs text-muted-foreground text-center">
+            {word ? 'Selection logged in Cloudflare D1 to avoid repeats' : 'Waiting for next selection'}
           </span>
-          <Button
-            variant="outline"
-            onClick={() => setCurrentIndex((prev) => Math.min(dailySanskritWords.length - 1, prev + 1))}
-            disabled={currentIndex === dailySanskritWords.length - 1}
-            className="border-foreground"
-          >
-            Next
-          </Button>
         </div>
 
-        {/* Share Options */}
         <div className="space-y-4">
           <h3 className="text-center text-sm text-muted-foreground">
             {t('daily.shareOn')}
           </h3>
-          
+
           <div className="flex justify-center gap-3 flex-wrap">
             <Button
               variant="outline"
               size="sm"
               onClick={() => handleShare('facebook')}
               className="border-foreground"
+              disabled={disabledInteractions}
             >
               <Facebook className="h-4 w-4 mr-2" />
               Facebook
@@ -197,6 +250,7 @@ export function DailyWordPage() {
               size="sm"
               onClick={() => handleShare('twitter')}
               className="border-foreground"
+              disabled={disabledInteractions}
             >
               <Twitter className="h-4 w-4 mr-2" />
               Twitter
@@ -206,6 +260,7 @@ export function DailyWordPage() {
               size="sm"
               onClick={() => handleShare('linkedin')}
               className="border-foreground"
+              disabled={disabledInteractions}
             >
               <Linkedin className="h-4 w-4 mr-2" />
               LinkedIn
@@ -215,6 +270,7 @@ export function DailyWordPage() {
               size="sm"
               onClick={() => handleShare('whatsapp')}
               className="border-foreground"
+              disabled={disabledInteractions}
             >
               <Share2 className="h-4 w-4 mr-2" />
               WhatsApp
@@ -224,13 +280,51 @@ export function DailyWordPage() {
               size="sm"
               onClick={handleDownload}
               className="border-foreground"
+              disabled={disabledInteractions}
             >
               <Download className="h-4 w-4 mr-2" />
-              {t('daily.download')}
+              Download Card
             </Button>
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
+}
+
+function normalizePayload(payload: any): DailyWord {
+  const rawMeanings = extractMeaningList(payload);
+  const primaryMeaning =
+    payload?.primaryMeaning ??
+    payload?.primary_meaning ??
+    rawMeanings[0] ??
+    '';
+
+  return {
+    id: payload.id,
+    word: payload.sanskrit,
+    transliteration: payload.transliteration,
+    primaryMeaning,
+    meanings: rawMeanings.length ? rawMeanings : primaryMeaning ? [primaryMeaning] : [],
+    partOfSpeech: payload.partOfSpeech ?? payload.part_of_speech ?? null,
+    hindiMeaning: payload.hindiMeaning ?? payload.hindi_meaning ?? null,
+    tags: Array.isArray(payload.tags) ? payload.tags : []
+  };
+}
+
+function extractMeaningList(payload: any): string[] {
+  const candidates = [payload?.meanings, payload?.english_meanings];
+  for (const candidate of candidates) {
+    if (Array.isArray(candidate)) {
+      return candidate.filter(Boolean);
+    }
+  }
+  if (typeof payload?.english_meanings === 'string') {
+    return payload.english_meanings
+      .split(/[,;]+/)
+      .map((item: string) => item.trim())
+      .filter(Boolean);
+  }
+  return [];
 }

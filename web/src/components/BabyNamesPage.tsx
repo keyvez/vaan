@@ -1,36 +1,90 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Input } from './ui/input';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
-import { Baby, Search } from 'lucide-react';
-import { sanskritBabyNames } from '../lib/sanskrit-data';
+import { SEO } from './SEO';
+import { Baby, Search, Loader2 } from 'lucide-react';
+
+const DEFAULT_BABY_NAMES_API = 'https://vaan-wordlist.keyvez.workers.dev/api/baby-names';
+const BABY_NAMES_API_ENDPOINT =
+  import.meta.env.VITE_BABY_NAMES_API_ENDPOINT?.trim() || DEFAULT_BABY_NAMES_API;
+
+type BabyName = {
+  id: number;
+  name: string;
+  slug: string;
+  gender: 'boy' | 'girl' | 'unisex';
+  meaning: string;
+  pronunciation: string;
+  story?: string;
+  first_letter: string;
+};
+
+const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 
 export function BabyNamesPage() {
   const { t } = useTranslation();
+  const [searchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState('');
   const [genderFilter, setGenderFilter] = useState<'all' | 'boy' | 'girl'>('all');
+  const [letterFilter, setLetterFilter] = useState<string>(searchParams.get('letter') || '');
+  const [names, setNames] = useState<BabyName[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const filteredNames = sanskritBabyNames.filter((name) => {
-    const matchesSearch = 
-      name.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      name.meaning.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesGender = genderFilter === 'all' || name.gender === genderFilter;
-    return matchesSearch && matchesGender;
-  });
+  const fetchNames = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const params = new URLSearchParams();
+      if (genderFilter !== 'all') params.set('gender', genderFilter);
+      if (letterFilter) params.set('letter', letterFilter);
+      if (searchQuery) params.set('search', searchQuery);
+
+      const response = await fetch(`${BABY_NAMES_API_ENDPOINT}?${params}`, {
+        headers: { Accept: 'application/json' }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch baby names: ${response.status}`);
+      }
+
+      const data = await response.json();
+      setNames(data.names || []);
+    } catch (err) {
+      console.error('Unable to fetch baby names', err);
+      setError('Unable to fetch baby names. Please try again.');
+      setNames([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [genderFilter, letterFilter, searchQuery]);
+
+  useEffect(() => {
+    fetchNames();
+  }, [fetchNames]);
 
   return (
-    <div className="min-h-screen py-12">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-12">
-          <div className="inline-flex items-center justify-center w-16 h-16 border-2 border-foreground mb-4">
-            <Baby className="h-8 w-8" />
+    <>
+      <SEO
+        title="Sanskrit Baby Names - Find Meaningful Names | Vaan"
+        description="Discover beautiful Sanskrit baby names with deep meanings, pronunciation guides, and cultural stories. Find the perfect name for your baby."
+        url="/baby-names"
+      />
+      <div className="min-h-screen py-12">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center justify-center w-16 h-16 border-2 border-foreground mb-4">
+              <Baby className="h-8 w-8" />
+            </div>
+            <h1 className="mb-4">{t('babyNames.title')}</h1>
+            <p className="text-muted-foreground">
+              {t('babyNames.subtitle')}
+            </p>
           </div>
-          <h1 className="mb-4">{t('babyNames.title')}</h1>
-          <p className="text-muted-foreground">
-            {t('babyNames.subtitle')}
-          </p>
-        </div>
 
         {/* Filters */}
         <div className="mb-8 space-y-4">
@@ -43,6 +97,7 @@ export function BabyNamesPage() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10 border-border"
+              disabled={loading}
             />
           </div>
 
@@ -52,6 +107,7 @@ export function BabyNamesPage() {
               variant={genderFilter === 'all' ? 'default' : 'outline'}
               onClick={() => setGenderFilter('all')}
               className={genderFilter === 'all' ? 'bg-foreground text-background' : 'border-foreground'}
+              disabled={loading}
             >
               {t('babyNames.all')}
             </Button>
@@ -59,6 +115,7 @@ export function BabyNamesPage() {
               variant={genderFilter === 'boy' ? 'default' : 'outline'}
               onClick={() => setGenderFilter('boy')}
               className={genderFilter === 'boy' ? 'bg-foreground text-background' : 'border-foreground'}
+              disabled={loading}
             >
               {t('babyNames.boy')}
             </Button>
@@ -66,51 +123,109 @@ export function BabyNamesPage() {
               variant={genderFilter === 'girl' ? 'default' : 'outline'}
               onClick={() => setGenderFilter('girl')}
               className={genderFilter === 'girl' ? 'bg-foreground text-background' : 'border-foreground'}
+              disabled={loading}
             >
               {t('babyNames.girl')}
             </Button>
           </div>
+
+          {/* Letter Filter */}
+          <div className="space-y-2">
+            <div className="text-center text-sm text-muted-foreground">
+              Browse by first letter
+            </div>
+            <div className="flex flex-wrap justify-center gap-1">
+              <Button
+                variant={letterFilter === '' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setLetterFilter('')}
+                className={letterFilter === '' ? 'bg-foreground text-background' : 'border-foreground'}
+                disabled={loading}
+              >
+                All
+              </Button>
+              {LETTERS.map((letter) => (
+                <Button
+                  key={letter}
+                  variant={letterFilter === letter ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setLetterFilter(letter)}
+                  className={letterFilter === letter ? 'bg-foreground text-background' : 'border-foreground'}
+                  disabled={loading}
+                >
+                  {letter}
+                </Button>
+              ))}
+            </div>
+          </div>
         </div>
 
-        {/* Names Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredNames.map((name, index) => (
-            <Card key={index} className="p-6 hover:border-foreground transition-colors">
-              <div className="flex items-start justify-between mb-3">
-                <h3>{name.name}</h3>
-                <span className="text-xs px-2 py-1 border border-border rounded">
-                  {name.gender}
-                </span>
-              </div>
-              
-              <div className="space-y-2 text-sm">
-                <div>
-                  <span className="text-muted-foreground">{t('babyNames.pronunciation')}: </span>
-                  <span className="italic">{name.pronunciation}</span>
-                </div>
-                
-                <div>
-                  <span className="text-muted-foreground">{t('babyNames.meaning')}: </span>
-                  <span>{name.meaning}</span>
-                </div>
-                
-                <p className="text-muted-foreground pt-2 border-t border-border mt-3">
-                  {name.story}
-                </p>
-              </div>
-            </Card>
-          ))}
-        </div>
-
-        {/* No Results */}
-        {filteredNames.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground">
-              No names found. Try adjusting your search or filters.
-            </p>
+        {/* Loading State */}
+        {loading && (
+          <div className="flex flex-col items-center justify-center gap-4 py-12">
+            <Loader2 className="h-10 w-10 animate-spin" />
+            <p className="text-muted-foreground text-sm">Loading baby names...</p>
           </div>
         )}
+
+        {/* Error State */}
+        {error && !loading && (
+          <div className="text-center py-12">
+            <p className="text-red-500 mb-4">{error}</p>
+            <Button onClick={fetchNames} variant="outline" className="border-foreground">
+              Try Again
+            </Button>
+          </div>
+        )}
+
+        {/* Names Grid */}
+        {!loading && !error && (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {names.map((name) => (
+                <Link key={name.id} to={`/baby-names/${name.slug}`}>
+                  <Card className="p-6 hover:border-foreground transition-colors cursor-pointer h-full">
+                    <div className="flex items-start justify-between mb-3">
+                      <h3>{name.name || name.pronunciation}</h3>
+                      <span className="text-xs px-2 py-1 border border-border rounded">
+                        {name.gender}
+                      </span>
+                    </div>
+
+                    <div className="space-y-2 text-sm">
+                      <div>
+                        <span className="text-muted-foreground">{t('babyNames.pronunciation')}: </span>
+                        <span className="italic">{name.pronunciation}</span>
+                      </div>
+
+                      <div>
+                        <span className="text-muted-foreground">{t('babyNames.meaning')}: </span>
+                        <span>{name.meaning}</span>
+                      </div>
+
+                      {name.story && (
+                        <p className="text-muted-foreground pt-2 border-t border-border mt-3 line-clamp-2">
+                          {name.story}
+                        </p>
+                      )}
+                    </div>
+                  </Card>
+                </Link>
+              ))}
+            </div>
+
+            {/* No Results */}
+            {names.length === 0 && (
+              <div className="text-center py-12">
+                <p className="text-muted-foreground">
+                  No names found. Try adjusting your search or filters.
+                </p>
+              </div>
+            )}
+          </>
+        )}
+        </div>
       </div>
-    </div>
+    </>
   );
 }
