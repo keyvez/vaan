@@ -188,7 +188,7 @@ fn generate_baby_name_svg(
 {}
 
   <!-- Branding -->
-  <text x="60" y="590" font-family="system-ui, -apple-system, sans-serif" font-size="20" fill="#666666">संस्कृत रोज़</text>
+  <text x="60" y="590" font-family="system-ui, -apple-system, sans-serif" font-size="20" fill="#666666">sanskrit.roj.app</text>
 </svg>"##, name_safe, pronunciation_safe, meaning_text, story_text)
 }
 
@@ -228,6 +228,6 @@ fn generate_word_svg(
 {}
 
   <!-- Branding -->
-  <text x="60" y="590" font-family="system-ui, -apple-system, sans-serif" font-size="20" fill="#666666">संस्कृत रोज़</text>
+  <text x="60" y="590" font-family="system-ui, -apple-system, sans-serif" font-size="20" fill="#666666">sanskrit.roj.app</text>
 </svg>"##, sanskrit_safe, transliteration_safe, meaning_text)
 }
