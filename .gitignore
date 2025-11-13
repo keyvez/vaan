@@ -59,8 +59,7 @@ wrangler.toml.local
 *.db
 *.sqlite
 *.sqlite3
-db/*.db
-db/*.sqlite
+db/
 
 # Local data
 data/
