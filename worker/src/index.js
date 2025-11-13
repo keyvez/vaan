@@ -1,6 +1,6 @@
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET,OPTIONS",
+  "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type",
 };
 
@@ -144,6 +144,34 @@ export default {
       } catch (error) {
         console.error("Failed to retrieve translations", error);
         return jsonResponse({ error: "Unable to retrieve translations" }, 500);
+      }
+    }
+
+    // Create Stripe Checkout Session
+    if (url.pathname === "/api/create-checkout-session" && request.method === "POST") {
+      try {
+        const { amount, type, successUrl, cancelUrl } = await request.json();
+
+        if (!env.STRIPE_SECRET_KEY) {
+          return jsonResponse({ error: "Stripe not configured" }, 500);
+        }
+
+        // Create Stripe Checkout Session
+        const session = await createStripeCheckoutSession(
+          env.STRIPE_SECRET_KEY,
+          amount,
+          type,
+          successUrl,
+          cancelUrl
+        );
+
+        return jsonResponse({ sessionId: session.id });
+      } catch (error) {
+        console.error("Failed to create checkout session", error);
+        return jsonResponse(
+          { error: "Unable to create checkout session" },
+          500,
+        );
       }
     }
 
@@ -703,4 +731,61 @@ async function processTranslationsBatch(env, languageCode) {
   }
 
   console.log(`Completed translation batch for ${languageCode}`);
+}
+
+/**
+ * Create a Stripe Checkout Session
+ * @param {string} secretKey - Stripe secret key
+ * @param {number} amount - Amount in cents
+ * @param {string} type - 'one-time' or 'monthly'
+ * @param {string} successUrl - URL to redirect on success
+ * @param {string} cancelUrl - URL to redirect on cancel
+ * @returns {Promise<Object>} Stripe session object
+ */
+async function createStripeCheckoutSession(secretKey, amount, type, successUrl, cancelUrl) {
+  const isRecurring = type === 'monthly';
+
+  // Create line item based on donation type
+  const lineItems = [{
+    price_data: {
+      currency: 'usd',
+      product_data: {
+        name: isRecurring ? 'Monthly Donation to संस्कृत रोज़' : 'Donation to संस्कृत रोज़',
+        description: isRecurring
+          ? 'Support Sanskrit language preservation with a monthly contribution'
+          : 'One-time contribution to support Sanskrit language preservation',
+      },
+      unit_amount: amount,
+      ...(isRecurring && {
+        recurring: {
+          interval: 'month',
+        },
+      }),
+    },
+    quantity: 1,
+  }];
+
+  const sessionData = {
+    mode: isRecurring ? 'subscription' : 'payment',
+    line_items: lineItems,
+    success_url: successUrl,
+    cancel_url: cancelUrl,
+  };
+
+  // Create Stripe Checkout Session
+  const response = await fetch('https://api.stripe.com/v1/checkout/sessions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${secretKey}`,
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: new URLSearchParams(sessionData).toString(),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Stripe API error: ${error}`);
+  }
+
+  return await response.json();
 }

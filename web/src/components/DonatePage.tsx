@@ -1,22 +1,73 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { loadStripe } from '@stripe/stripe-js';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Heart, Lock, Check } from 'lucide-react';
+import { toast } from 'sonner';
+
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '');
+
+const CHECKOUT_API = import.meta.env.VITE_CHECKOUT_API_ENDPOINT?.trim() ||
+  'https://vaan-wordlist.keyvez.workers.dev/api/create-checkout-session';
 
 export function DonatePage() {
   const { t } = useTranslation();
   const [donationType, setDonationType] = useState<'one-time' | 'monthly'>('one-time');
   const [amount, setAmount] = useState('25');
   const [customAmount, setCustomAmount] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const presetAmounts = ['10', '25', '50', '100'];
 
-  const handleDonate = () => {
-    // In a real implementation, this would integrate with Stripe
+  const handleDonate = async () => {
     const finalAmount = customAmount || amount;
-    alert(`Thank you for your support! Processing ${donationType} donation of $${finalAmount} (Stripe integration would happen here)`);
+    const amountInCents = parseFloat(finalAmount) * 100;
+
+    if (!amountInCents || amountInCents < 100) {
+      toast.error('Please enter a valid amount ($1 minimum)');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      // Create Stripe Checkout session
+      const response = await fetch(CHECKOUT_API, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: amountInCents,
+          type: donationType,
+          successUrl: `${window.location.origin}/donate?success=true`,
+          cancelUrl: `${window.location.origin}/donate?canceled=true`,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create checkout session');
+      }
+
+      const { sessionId } = await response.json();
+
+      // Redirect to Stripe Checkout
+      const stripe = await stripePromise;
+      if (!stripe) {
+        throw new Error('Stripe failed to load');
+      }
+
+      const { error } = await stripe.redirectToCheckout({ sessionId });
+
+      if (error) {
+        throw error;
+      }
+    } catch (error) {
+      console.error('Donation error:', error);
+      toast.error('Failed to process donation. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -91,13 +142,12 @@ export function DonatePage() {
           {/* Donate Button */}
           <Button
             onClick={handleDonate}
-            disabled={!amount && !customAmount}
+            disabled={!amount && !customAmount || loading}
             className="w-full bg-foreground text-background hover:bg-foreground/90"
             size="lg"
           >
             <Heart className="mr-2 h-5 w-5" />
-            {t('donate.button')} ${customAmount || amount}
-            {donationType === 'monthly' && '/month'}
+            {loading ? 'Processing...' : `${t('donate.button')} $${customAmount || amount}${donationType === 'monthly' ? '/month' : ''}`}
           </Button>
 
           <div className="flex items-center justify-center gap-2 mt-4 text-sm text-muted-foreground">
