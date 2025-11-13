@@ -14,7 +14,7 @@ export function DonatePage() {
   const { t } = useTranslation();
   const { isAuthenticated, user, login } = useAuth();
   const [donationType, setDonationType] = useState<'one-time' | 'monthly'>('one-time');
-  const [amount, setAmount] = useState('25');
+  const [amount, setAmount] = useState('5');
   const [customAmount, setCustomAmount] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -24,7 +24,7 @@ export function DonatePage() {
   const isSuccess = searchParams.has('success');
   const isCanceled = searchParams.has('canceled');
 
-  const presetAmounts = ['10', '25', '50', '100'];
+  const presetAmounts = ['2', '5', '10', '25'];
 
   // Mark user as supporter when donation is successful
   useEffect(() => {
@@ -272,19 +272,19 @@ export function DonatePage() {
         {/* Impact Section */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <Card className="p-6 text-center">
+            <div className="text-3xl mb-2">$2</div>
+            <p className="text-sm text-muted-foreground">
+              Supports daily word creation for one week
+            </p>
+          </Card>
+          <Card className="p-6 text-center">
+            <div className="text-3xl mb-2">$5</div>
+            <p className="text-sm text-muted-foreground">
+              Helps maintain our Sanskrit database
+            </p>
+          </Card>
+          <Card className="p-6 text-center">
             <div className="text-3xl mb-2">$10</div>
-            <p className="text-sm text-muted-foreground">
-              Supports daily word creation for one month
-            </p>
-          </Card>
-          <Card className="p-6 text-center">
-            <div className="text-3xl mb-2">$25</div>
-            <p className="text-sm text-muted-foreground">
-              Helps develop new learning exercises
-            </p>
-          </Card>
-          <Card className="p-6 text-center">
-            <div className="text-3xl mb-2">$50</div>
             <p className="text-sm text-muted-foreground">
               Funds AI companion improvements
             </p>
