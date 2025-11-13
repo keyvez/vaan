@@ -29,6 +29,7 @@ export function Header() {
   const { user, isAuthenticated, logout } = useAuth();
   const location = useLocation();
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const isSupporter = localStorage.getItem('is_sanskrit_supporter') === 'true';
 
   const navItems = [
     { path: '/', label: t('nav.home') },
@@ -172,7 +173,24 @@ export function Header() {
                     >
                       <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>
                         <p style={{ fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>{user.name}</p>
-                        <p style={{ fontSize: '12px', color: 'var(--muted-foreground)' }}>{user.email}</p>
+                        <p style={{ fontSize: '12px', color: 'var(--muted-foreground)', marginBottom: isSupporter ? '8px' : '0' }}>{user.email}</p>
+                        {isSupporter && (
+                          <div style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            padding: '4px 8px',
+                            backgroundColor: 'rgba(255, 165, 0, 0.1)',
+                            border: '1px solid rgba(255, 165, 0, 0.3)',
+                            borderRadius: '4px',
+                            fontSize: '11px',
+                            fontWeight: 500,
+                            color: 'rgba(255, 140, 0, 1)'
+                          }}>
+                            <Heart style={{ width: '12px', height: '12px', fill: 'currentColor' }} />
+                            <span>Sanskrit Supporter</span>
+                          </div>
+                        )}
                       </div>
                       <button
                         onClick={() => {

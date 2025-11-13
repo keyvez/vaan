@@ -1,16 +1,18 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Heart, Lock, Check } from 'lucide-react';
 import { toast } from 'sonner';
+import { useAuth } from '../lib/auth-context';
 
 const CHECKOUT_API = import.meta.env.VITE_CHECKOUT_API_ENDPOINT?.trim() ||
   'https://vaan-wordlist.keyvez.workers.dev/api/create-checkout-session';
 
 export function DonatePage() {
   const { t } = useTranslation();
+  const { isAuthenticated } = useAuth();
   const [donationType, setDonationType] = useState<'one-time' | 'monthly'>('one-time');
   const [amount, setAmount] = useState('25');
   const [customAmount, setCustomAmount] = useState('');
@@ -19,8 +21,18 @@ export function DonatePage() {
   // Check if test mode is enabled via URL parameter
   const searchParams = new URLSearchParams(window.location.search);
   const isTestMode = searchParams.has('test') || searchParams.has('sandbox');
+  const isSuccess = searchParams.has('success');
+  const isCanceled = searchParams.has('canceled');
 
   const presetAmounts = ['10', '25', '50', '100'];
+
+  // Mark user as supporter when donation is successful
+  useEffect(() => {
+    if (isSuccess && isAuthenticated) {
+      localStorage.setItem('is_sanskrit_supporter', 'true');
+      localStorage.setItem('supporter_since', new Date().toISOString());
+    }
+  }, [isSuccess, isAuthenticated]);
 
   const handleDonate = async () => {
     const finalAmount = customAmount || amount;
@@ -66,6 +78,65 @@ export function DonatePage() {
     }
   };
 
+  // Show thank you message if donation was successful
+  if (isSuccess) {
+    return (
+      <div className="min-h-screen py-12">
+        <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
+          <Card className="p-8 text-center">
+            <div className="inline-flex items-center justify-center w-20 h-20 border-2 border-green-600 dark:border-green-400 rounded-full mb-6">
+              <Check className="h-10 w-10 text-green-600 dark:text-green-400" />
+            </div>
+            <h1 className="text-3xl font-bold mb-4">Thank You for Your Support!</h1>
+            <p className="text-lg text-muted-foreground mb-6">
+              Your generous contribution helps preserve and promote the Sanskrit language for future generations.
+            </p>
+            <div className="bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-950 dark:to-amber-950 border-2 border-orange-200 dark:border-orange-800 rounded-lg p-6 mb-6">
+              <h2 className="text-xl font-semibold mb-3">You're Now a Sanskrit Supporter! 🙏</h2>
+              <p className="text-sm text-muted-foreground">
+                Your contribution directly supports:
+              </p>
+              <ul className="text-left mt-4 space-y-2 text-sm">
+                <li className="flex items-start gap-2">
+                  <Check className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
+                  <span>Daily Sanskrit word creation and curation</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <Check className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
+                  <span>Development of new learning tools and exercises</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <Check className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
+                  <span>AI companion improvements for better learning</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <Check className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
+                  <span>Keeping संस्कृत रोज़ free for learners worldwide</span>
+                </li>
+              </ul>
+            </div>
+            <div className="space-y-3">
+              <Button
+                onClick={() => window.location.href = '/'}
+                className="w-full bg-foreground text-background hover:bg-foreground/90"
+                size="lg"
+              >
+                Continue Learning
+              </Button>
+              <Button
+                onClick={() => window.location.href = '/donate'}
+                variant="outline"
+                className="w-full border-foreground"
+              >
+                Make Another Donation
+              </Button>
+            </div>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen py-12">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -80,6 +151,11 @@ export function DonatePage() {
           {isTestMode && (
             <div className="mt-4 inline-block px-4 py-2 bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 rounded-md text-sm font-medium">
               Test Mode Active - Use card: 4242 4242 4242 4242
+            </div>
+          )}
+          {isCanceled && (
+            <div className="mt-4 inline-block px-4 py-2 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded-md text-sm font-medium">
+              Donation canceled. No worries - you can try again anytime!
             </div>
           )}
         </div>
