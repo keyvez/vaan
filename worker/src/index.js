@@ -165,7 +165,7 @@ export default {
           cancelUrl
         );
 
-        return jsonResponse({ sessionId: session.id });
+        return jsonResponse({ url: session.url });
       } catch (error) {
         console.error("Failed to create checkout session", error);
         return jsonResponse(

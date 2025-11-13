@@ -1,13 +1,10 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { loadStripe } from '@stripe/stripe-js';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Heart, Lock, Check } from 'lucide-react';
 import { toast } from 'sonner';
-
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '');
 
 const CHECKOUT_API = import.meta.env.VITE_CHECKOUT_API_ENDPOINT?.trim() ||
   'https://vaan-wordlist.keyvez.workers.dev/api/create-checkout-session';
@@ -49,23 +46,17 @@ export function DonatePage() {
         throw new Error('Failed to create checkout session');
       }
 
-      const { sessionId } = await response.json();
+      const { url } = await response.json();
+
+      if (!url) {
+        throw new Error('No checkout URL returned');
+      }
 
       // Redirect to Stripe Checkout
-      const stripe = await stripePromise;
-      if (!stripe) {
-        throw new Error('Stripe failed to load');
-      }
-
-      const { error } = await stripe.redirectToCheckout({ sessionId });
-
-      if (error) {
-        throw error;
-      }
+      window.location.href = url;
     } catch (error) {
       console.error('Donation error:', error);
       toast.error('Failed to process donation. Please try again.');
-    } finally {
       setLoading(false);
     }
   };
