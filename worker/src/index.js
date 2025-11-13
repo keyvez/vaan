@@ -40,9 +40,10 @@ export default {
 
         // Process a batch of lexemes in the background (don't await)
         // This gradually builds up the baby names database
+        // Prioritize the selected letter if provided
         if (env.GEMINI_API_KEY && ctx.waitUntil) {
           ctx.waitUntil(
-            processLexemesBatch(env).catch((err) => {
+            processLexemesBatch(env, letter).catch((err) => {
               console.error("Background lexeme processing failed:", err);
             }),
           );
@@ -315,15 +316,48 @@ async function getBabyNames(env, gender, letter, search) {
   return results || [];
 }
 
-async function processLexemesBatch(env) {
-  // Get a batch of unprocessed lexemes
-  const query = `
+async function processLexemesBatch(env, priorityLetter = '') {
+  // Get a batch of unprocessed lexemes, prioritizing the selected letter
+  let query = `
     SELECT id, sanskrit, transliteration, primary_meaning, english_meanings
     FROM lexemes
     WHERE baby_name_checked = 0
-    ORDER BY RANDOM()
-    LIMIT ?
   `;
+
+  // If a priority letter is provided, prioritize lexemes starting with that letter
+  if (priorityLetter && priorityLetter.length > 0) {
+    const upperLetter = priorityLetter.toUpperCase();
+    query += `
+      ORDER BY
+        CASE
+          WHEN UPPER(SUBSTR(transliteration, 1, 1)) = ? THEN 0
+          ELSE 1
+        END,
+        RANDOM()
+      LIMIT ?
+    `;
+
+    const { results: lexemes } = await env.VAAN_LEXICON_DB.prepare(query)
+      .bind(upperLetter, BATCH_SIZE)
+      .all();
+
+    if (lexemes && lexemes.length > 0) {
+      const priorityCount = lexemes.filter(l =>
+        l.transliteration && l.transliteration.toUpperCase().startsWith(upperLetter)
+      ).length;
+      console.log(`Processing ${lexemes.length} lexemes (${priorityCount} starting with '${upperLetter}')`);
+    }
+
+    if (!lexemes || lexemes.length === 0) {
+      console.log("No unprocessed lexemes found");
+      return;
+    }
+
+    return await processBatchResults(env, lexemes);
+  }
+
+  // No priority letter, process random lexemes
+  query += ` ORDER BY RANDOM() LIMIT ?`;
 
   const { results: lexemes } = await env.VAAN_LEXICON_DB.prepare(query)
     .bind(BATCH_SIZE)
@@ -336,6 +370,10 @@ async function processLexemesBatch(env) {
 
   console.log(`Processing ${lexemes.length} lexemes for baby name suitability`);
 
+  return await processBatchResults(env, lexemes);
+}
+
+async function processBatchResults(env, lexemes) {
   try {
     // Process all lexemes in a single batch API call
     const results = await checkBabyNameSuitabilityBatch(env, lexemes);
