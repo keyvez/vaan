@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { usePreferences, AVAILABLE_FONTS } from '../lib/preferences-context';
 import { useAuth } from '../lib/auth-context';
-import { Moon, Sun, Menu, Settings, User, LogOut } from 'lucide-react';
+import { Moon, Sun, Menu, Settings, User, LogOut, Heart } from 'lucide-react';
 import { Button } from './ui/button';
 import {
   Sheet,
