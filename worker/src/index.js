@@ -295,9 +295,9 @@ async function getBabyNames(env, gender, letter, search) {
   let query = "SELECT * FROM baby_names WHERE 1=1";
   const bindings = [];
 
-  // Filter by gender
+  // Filter by gender (include unisex names for boy/girl filters)
   if (gender && gender !== "all") {
-    query += " AND gender = ?";
+    query += " AND (gender = ? OR gender = 'unisex')";
     bindings.push(gender);
   }
 
@@ -318,9 +318,9 @@ async function getBabyNames(env, gender, letter, search) {
     bindings.length = 0; // Reset bindings for FTS query
     bindings.push(search);
 
-    // Re-apply gender filter if needed
+    // Re-apply gender filter if needed (include unisex names)
     if (gender && gender !== "all") {
-      query += " AND baby_names.gender = ?";
+      query += " AND (baby_names.gender = ? OR baby_names.gender = 'unisex')";
       bindings.push(gender);
     }
 
