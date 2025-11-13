@@ -4,11 +4,13 @@ import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Progress } from './ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
-import { GraduationCap, RotateCw, Check, X } from 'lucide-react';
+import { GraduationCap, RotateCw, Check, X, User, TrendingUp } from 'lucide-react';
 import { flashcards, quizQuestions } from '../lib/sanskrit-data';
+import { useAuth } from '../lib/auth-context';
 
 export function LearnPage() {
   const { t } = useTranslation();
+  const { isAuthenticated, login } = useAuth();
   const [flashcardIndex, setFlashcardIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [quizIndex, setQuizIndex] = useState(0);
@@ -76,6 +78,32 @@ export function LearnPage() {
             Interactive exercises to master Sanskrit
           </p>
         </div>
+
+        {/* Sign Up Section - Only show if not authenticated */}
+        {!isAuthenticated && (
+          <Card className="p-6 mb-8 border-2 border-orange-200 dark:border-orange-800 bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-950 dark:to-amber-950">
+            <div className="flex flex-col sm:flex-row items-center gap-4 text-center sm:text-left">
+              <div className="flex-shrink-0">
+                <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-amber-500 rounded-full flex items-center justify-center">
+                  <TrendingUp className="h-6 w-6 text-white" />
+                </div>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-bold mb-1">Track Your Learning Progress</h3>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Sign up to save your scores, track improvement over time, and get personalized recommendations.
+                </p>
+              </div>
+              <Button
+                onClick={login}
+                className="bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white whitespace-nowrap"
+              >
+                <User className="mr-2 h-4 w-4" />
+                Sign Up Free
+              </Button>
+            </div>
+          </Card>
+        )}
 
         <Tabs defaultValue="flashcards" className="w-full">
           <TabsList className="grid w-full max-w-md mx-auto grid-cols-2 mb-8">

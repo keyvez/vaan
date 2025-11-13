@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
-import { Heart, Lock, Check } from 'lucide-react';
+import { Heart, Lock, Check, User, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '../lib/auth-context';
 
@@ -12,7 +12,7 @@ const CHECKOUT_API = import.meta.env.VITE_CHECKOUT_API_ENDPOINT?.trim() ||
 
 export function DonatePage() {
   const { t } = useTranslation();
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, login } = useAuth();
   const [donationType, setDonationType] = useState<'one-time' | 'monthly'>('one-time');
   const [amount, setAmount] = useState('25');
   const [customAmount, setCustomAmount] = useState('');
@@ -166,6 +166,35 @@ export function DonatePage() {
             </div>
           )}
         </div>
+
+        {/* Sign Up Section - Only show if not authenticated */}
+        {!isAuthenticated && (
+          <Card className="p-6 md:p-8 mb-8 border-2 border-orange-200 dark:border-orange-800 bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-950 dark:to-amber-950">
+            <div className="flex flex-col md:flex-row items-center gap-6">
+              <div className="flex-shrink-0">
+                <div className="w-16 h-16 bg-gradient-to-br from-orange-500 to-amber-500 rounded-full flex items-center justify-center">
+                  <User className="h-8 w-8 text-white" />
+                </div>
+              </div>
+              <div className="flex-1 text-center md:text-left">
+                <div className="flex items-center justify-center md:justify-start gap-2 mb-2">
+                  <Sparkles className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+                  <h3 className="text-xl font-bold">Sign Up for Recurring Donations</h3>
+                </div>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Create a free account to set up monthly donations and manage your subscription anytime through our secure portal.
+                </p>
+                <Button
+                  onClick={login}
+                  className="bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white"
+                >
+                  <User className="mr-2 h-4 w-4" />
+                  Sign Up with Google
+                </Button>
+              </div>
+            </div>
+          </Card>
+        )}
 
         <Card className="p-8 mb-8">
           {/* Donation Type */}

@@ -4,7 +4,8 @@ import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { MessageSquare, Send, Bot, User } from 'lucide-react';
+import { MessageSquare, Send, Bot, User, Sparkles } from 'lucide-react';
+import { useAuth } from '../lib/auth-context';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -18,6 +19,7 @@ interface Message {
 
 export function AICompanionPage() {
   const { t } = useTranslation();
+  const { isAuthenticated, login } = useAuth();
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'assistant',
@@ -105,6 +107,32 @@ export function AICompanionPage() {
             {t('ai.subtitle')}
           </p>
         </div>
+
+        {/* Sign Up Section - Only show if not authenticated */}
+        {!isAuthenticated && (
+          <Card className="p-6 mb-6 border-2 border-orange-200 dark:border-orange-800 bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-950 dark:to-amber-950">
+            <div className="flex flex-col sm:flex-row items-center gap-4 text-center sm:text-left">
+              <div className="flex-shrink-0">
+                <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-amber-500 rounded-full flex items-center justify-center">
+                  <Sparkles className="h-6 w-6 text-white" />
+                </div>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-bold mb-1">Unlock Personalized AI Learning</h3>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Sign up to save your conversation history, get tailored recommendations, and access advanced AI features.
+                </p>
+              </div>
+              <Button
+                onClick={login}
+                className="bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white whitespace-nowrap"
+              >
+                <User className="mr-2 h-4 w-4" />
+                Sign Up Free
+              </Button>
+            </div>
+          </Card>
+        )}
 
         {/* Controls */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
