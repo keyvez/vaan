@@ -124,6 +124,29 @@ export default {
       }
     }
 
+    // Get translations for a specific language
+    if (url.pathname.match(/^\/api\/translations\/[^/]+$/) && request.method === "GET") {
+      try {
+        const languageCode = url.pathname.split("/").pop();
+        const translations = await getTranslations(env, languageCode);
+
+        // Process translations in the background (don't await)
+        // This gradually builds up translations for the requested language
+        if (ctx.waitUntil) {
+          ctx.waitUntil(
+            processTranslationsBatch(env, languageCode).catch((err) => {
+              console.error("Background translation processing failed:", err);
+            }),
+          );
+        }
+
+        return jsonResponse({ translations });
+      } catch (error) {
+        console.error("Failed to retrieve translations", error);
+        return jsonResponse({ error: "Unable to retrieve translations" }, 500);
+      }
+    }
+
     return new Response("Not found", { status: 404, headers: CORS_HEADERS });
   },
 };
@@ -589,4 +612,95 @@ function jsonResponse(body, status = 200) {
       ...CORS_HEADERS,
     },
   });
+}
+
+// Translation functions
+async function getTranslations(env, languageCode) {
+  const results = await env.VAAN_LEXICON_DB.prepare(
+    "SELECT translation_key, translated_text FROM translations WHERE language_code = ?"
+  ).bind(languageCode).all();
+
+  // Convert to key-value object
+  const translations = {};
+  for (const row of results.results || []) {
+    translations[row.translation_key] = row.translated_text;
+  }
+
+  return translations;
+}
+
+async function processTranslationsBatch(env, languageCode) {
+  // Skip English as that's our source language
+  if (languageCode === 'en') {
+    return;
+  }
+
+  console.log(`Processing translations for language: ${languageCode}`);
+
+  // Get untranslated keys for this language
+  const query = `
+    SELECT tk.translation_key, tk.source_text
+    FROM translation_keys tk
+    LEFT JOIN translations t ON tk.translation_key = t.translation_key AND t.language_code = ?
+    WHERE t.id IS NULL
+    ORDER BY RANDOM()
+    LIMIT ?
+  `;
+
+  const untranslated = await env.VAAN_LEXICON_DB.prepare(query)
+    .bind(languageCode, BATCH_SIZE)
+    .all();
+
+  if (!untranslated.results || untranslated.results.length === 0) {
+    console.log(`No untranslated strings found for ${languageCode}`);
+    return;
+  }
+
+  console.log(`Found ${untranslated.results.length} untranslated strings for ${languageCode}`);
+
+  // Translate each string using the free-translate API
+  for (const item of untranslated.results) {
+    try {
+      console.log(`Translating "${item.source_text}" to ${languageCode}`);
+
+      const response = await fetch('https://free-translate-go-api.onrender.com/translate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text: item.source_text,
+          to: languageCode,
+        }),
+      });
+
+      if (!response.ok) {
+        console.error(`Translation API error for "${item.source_text}": ${response.status}`);
+        continue;
+      }
+
+      const data = await response.json();
+      const translatedText = data.translatedText || data.text || item.source_text;
+
+      // Save the translation
+      await env.VAAN_LEXICON_DB.prepare(
+        `INSERT INTO translations (translation_key, language_code, source_text, translated_text)
+         VALUES (?, ?, ?, ?)
+         ON CONFLICT(translation_key, language_code)
+         DO UPDATE SET translated_text = ?, updated_at = CURRENT_TIMESTAMP`
+      ).bind(
+        item.translation_key,
+        languageCode,
+        item.source_text,
+        translatedText,
+        translatedText
+      ).run();
+
+      console.log(`Saved translation: ${item.translation_key} -> ${translatedText}`);
+    } catch (error) {
+      console.error(`Failed to translate "${item.source_text}":`, error);
+    }
+  }
+
+  console.log(`Completed translation batch for ${languageCode}`);
 }
