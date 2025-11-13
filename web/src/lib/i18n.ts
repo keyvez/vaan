@@ -153,9 +153,9 @@ i18n
     backend: {
       loadPath: (lngs: string[], namespaces: string[]) => {
         const lng = lngs[0];
-        // Don't load English from backend, we have it locally
+        // Skip backend loading for English - we have it locally
         if (lng === 'en') {
-          return '';
+          return undefined; // Return undefined to skip loading
         }
         return `${TRANSLATIONS_API}/${lng}`;
       },
@@ -185,6 +185,9 @@ i18n
     preload: [],
     // Merge loaded resources with existing ones
     partialBundledLanguages: true,
+    // Only use backend for non-English languages
+    ns: ['translation'],
+    defaultNS: 'translation',
   });
 
 export default i18n;
