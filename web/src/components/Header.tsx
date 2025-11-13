@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { usePreferences, AVAILABLE_FONTS } from '../lib/preferences-context';
-import { Moon, Sun, Menu, Settings } from 'lucide-react';
+import { useAuth } from '../lib/auth-context';
+import { Moon, Sun, Menu, Settings, User, LogOut } from 'lucide-react';
 import { Button } from './ui/button';
 import {
   Sheet,
@@ -24,7 +26,9 @@ import {
 export function Header() {
   const { t } = useTranslation();
   const { theme, setTheme, font, setFont, language, setLanguage } = usePreferences();
+  const { user, isAuthenticated, logout } = useAuth();
   const location = useLocation();
+  const [showUserMenu, setShowUserMenu] = useState(false);
 
   const navItems = [
     { path: '/', label: t('nav.home') },
@@ -117,6 +121,90 @@ export function Header() {
                 </div>
               </PopoverContent>
             </Popover>
+
+            {/* User Profile Menu */}
+            {isAuthenticated && user && (
+              <div style={{ position: 'relative' }}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="rounded-full"
+                  onClick={() => setShowUserMenu(!showUserMenu)}
+                >
+                  {user.picture ? (
+                    <img
+                      src={user.picture}
+                      alt={user.name}
+                      className="h-8 w-8 rounded-full"
+                    />
+                  ) : (
+                    <User className="h-5 w-5" />
+                  )}
+                </Button>
+
+                {showUserMenu && (
+                  <>
+                    <div
+                      style={{
+                        position: 'fixed',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        zIndex: 40
+                      }}
+                      onClick={() => setShowUserMenu(false)}
+                    />
+                    <div
+                      style={{
+                        position: 'absolute',
+                        right: 0,
+                        top: '100%',
+                        marginTop: '8px',
+                        width: '224px',
+                        backgroundColor: 'var(--background)',
+                        border: '1px solid var(--border)',
+                        borderRadius: '8px',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                        zIndex: 50,
+                        overflow: 'hidden'
+                      }}
+                    >
+                      <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>
+                        <p style={{ fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>{user.name}</p>
+                        <p style={{ fontSize: '12px', color: 'var(--muted-foreground)' }}>{user.email}</p>
+                      </div>
+                      <button
+                        onClick={() => {
+                          logout();
+                          setShowUserMenu(false);
+                        }}
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          border: 'none',
+                          background: 'none',
+                          cursor: 'pointer',
+                          fontSize: '14px',
+                          color: 'var(--foreground)'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = 'var(--muted)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = 'transparent';
+                        }}
+                      >
+                        <LogOut style={{ marginRight: '8px', width: '16px', height: '16px' }} />
+                        <span>Log out</span>
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
 
             {/* Theme Toggle */}
             <Button

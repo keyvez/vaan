@@ -5,7 +5,9 @@ import { Input } from './ui/input';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { SEO } from './SEO';
-import { Baby, Search, Loader2 } from 'lucide-react';
+import { Baby, Search, Loader2, Heart } from 'lucide-react';
+import { useLikes } from '../lib/use-likes';
+import { SignInDialog } from './SignInDialog';
 
 const DEFAULT_BABY_NAMES_API = 'https://vaan-wordlist.keyvez.workers.dev/api/baby-names';
 const BABY_NAMES_API_ENDPOINT =
@@ -33,6 +35,7 @@ export function BabyNamesPage() {
   const [names, setNames] = useState<BabyName[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { toggleLike, isLiked, showSignInDialog, setShowSignInDialog } = useLikes();
 
   const fetchNames = useCallback(async () => {
     setLoading(true);
@@ -184,8 +187,25 @@ export function BabyNamesPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {names.map((name) => (
                 <Link key={name.id} to={`/baby-names/${name.slug}`}>
-                  <Card className="p-6 hover:border-foreground transition-colors cursor-pointer h-full">
-                    <div className="flex items-start justify-between mb-3">
+                  <Card className="p-6 hover:border-foreground transition-colors cursor-pointer h-full relative">
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        toggleLike(String(name.id));
+                      }}
+                      className="absolute top-4 right-4 p-2 hover:bg-muted rounded-full transition-colors z-10"
+                      aria-label="Like this name"
+                    >
+                      <Heart
+                        className={`h-5 w-5 ${
+                          isLiked(String(name.id))
+                            ? 'fill-red-500 text-red-500'
+                            : 'text-muted-foreground hover:text-foreground'
+                        }`}
+                      />
+                    </button>
+                    <div className="flex items-start justify-between mb-3 pr-8">
                       <h3>{name.name || name.pronunciation}</h3>
                       <span className="text-xs px-2 py-1 border border-border rounded">
                         {name.gender}
@@ -226,6 +246,8 @@ export function BabyNamesPage() {
         )}
         </div>
       </div>
+
+      <SignInDialog open={showSignInDialog} onOpenChange={setShowSignInDialog} />
     </>
   );
 }

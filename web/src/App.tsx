@@ -4,11 +4,13 @@ import { HelmetProvider } from 'react-helmet-async';
 import { I18nextProvider } from 'react-i18next';
 import i18n from './lib/i18n';
 import { PreferencesProvider, usePreferences } from './lib/preferences-context';
+import { AuthProvider } from './lib/auth-context';
 import { Header } from './components/Header';
 import { HomePage } from './components/HomePage';
 import { TranslatePage } from './components/TranslatePage';
 import { BabyNamesPage } from './components/BabyNamesPage';
 import { BabyNameDetailPage } from './components/BabyNameDetailPage';
+import { LeaderboardPage } from './components/LeaderboardPage';
 import { DailyWordPage } from './components/DailyWordPage';
 import { LearnPage } from './components/LearnPage';
 import { AICompanionPage } from './components/AICompanionPage';
@@ -36,20 +38,6 @@ function AppContent() {
   return (
     <BrowserRouter>
       <div className="min-h-screen bg-background text-foreground">
-        {/* Meta tags for social media */}
-        <head>
-          <title>Vaan - Discover the Beauty of Sanskrit</title>
-          <meta name="description" content="Your gateway to ancient Sanskrit wisdom. Learn Sanskrit, find baby names, practice daily, and more." />
-          <meta property="og:title" content="Vaan - Sanskrit Learning Platform" />
-          <meta property="og:description" content="Discover Sanskrit through interactive learning, AI companion, daily words, and more." />
-          <meta property="og:type" content="website" />
-          <meta property="og:url" content="https://vaan.pages.dev" />
-          <meta property="og:site_name" content="Vaan" />
-          <meta name="twitter:card" content="summary_large_image" />
-          <meta name="twitter:title" content="Vaan - Sanskrit Learning Platform" />
-          <meta name="twitter:description" content="Discover Sanskrit through interactive learning, AI companion, daily words, and more." />
-        </head>
-
         <Header />
         <main>
           <Routes>
@@ -57,6 +45,7 @@ function AppContent() {
             <Route path="/translate" element={<TranslatePage />} />
             <Route path="/baby-names" element={<BabyNamesPage />} />
             <Route path="/baby-names/:slug" element={<BabyNameDetailPage />} />
+            <Route path="/leaderboard" element={<LeaderboardPage />} />
             <Route path="/daily-word" element={<DailyWordPage />} />
             <Route path="/learn" element={<LearnPage />} />
             <Route path="/ai-companion" element={<AICompanionPage />} />
@@ -145,9 +134,11 @@ export default function App() {
   return (
     <HelmetProvider>
       <I18nextProvider i18n={i18n}>
-        <PreferencesProvider>
-          <AppContent />
-        </PreferencesProvider>
+        <AuthProvider>
+          <PreferencesProvider>
+            <AppContent />
+          </PreferencesProvider>
+        </AuthProvider>
       </I18nextProvider>
     </HelmetProvider>
   );
