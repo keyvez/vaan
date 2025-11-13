@@ -16,6 +16,10 @@ export function DonatePage() {
   const [customAmount, setCustomAmount] = useState('');
   const [loading, setLoading] = useState(false);
 
+  // Check if test mode is enabled via URL parameter
+  const searchParams = new URLSearchParams(window.location.search);
+  const isTestMode = searchParams.has('test') || searchParams.has('sandbox');
+
   const presetAmounts = ['10', '25', '50', '100'];
 
   const handleDonate = async () => {
@@ -37,8 +41,9 @@ export function DonatePage() {
         body: JSON.stringify({
           amount: amountInCents,
           type: donationType,
-          successUrl: `${window.location.origin}/donate?success=true`,
-          cancelUrl: `${window.location.origin}/donate?canceled=true`,
+          testMode: isTestMode,
+          successUrl: `${window.location.origin}/donate?success=true${isTestMode ? '&test=true' : ''}`,
+          cancelUrl: `${window.location.origin}/donate?canceled=true${isTestMode ? '&test=true' : ''}`,
         }),
       });
 
@@ -72,6 +77,11 @@ export function DonatePage() {
           <p className="text-muted-foreground max-w-2xl mx-auto">
             {t('donate.subtitle')}
           </p>
+          {isTestMode && (
+            <div className="mt-4 inline-block px-4 py-2 bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 rounded-md text-sm font-medium">
+              Test Mode Active - Use card: 4242 4242 4242 4242
+            </div>
+          )}
         </div>
 
         <Card className="p-8 mb-8">

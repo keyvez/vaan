@@ -150,15 +150,20 @@ export default {
     // Create Stripe Checkout Session
     if (url.pathname === "/api/create-checkout-session" && request.method === "POST") {
       try {
-        const { amount, type, successUrl, cancelUrl } = await request.json();
+        const { amount, type, testMode, successUrl, cancelUrl } = await request.json();
 
-        if (!env.STRIPE_SECRET_KEY) {
-          return jsonResponse({ error: "Stripe not configured" }, 500);
+        // Select appropriate Stripe key based on test mode
+        const stripeKey = testMode ? env.STRIPE_TEST_SECRET_KEY : env.STRIPE_SECRET_KEY;
+
+        if (!stripeKey) {
+          return jsonResponse({
+            error: testMode ? "Stripe test mode not configured" : "Stripe not configured"
+          }, 500);
         }
 
         // Create Stripe Checkout Session
         const session = await createStripeCheckoutSession(
-          env.STRIPE_SECRET_KEY,
+          stripeKey,
           amount,
           type,
           successUrl,
