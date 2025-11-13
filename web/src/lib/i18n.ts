@@ -5,7 +5,8 @@ import Backend from 'i18next-http-backend';
 const TRANSLATIONS_API = import.meta.env.VITE_TRANSLATIONS_API_ENDPOINT?.trim() ||
   'https://vaan-wordlist.keyvez.workers.dev/api/translations';
 
-// Fallback English translations (loaded immediately)
+// Fallback translations (loaded immediately)
+// API-loaded translations will merge with and override these
 const resources = {
   en: {
     translation: {
@@ -102,6 +103,41 @@ const resources = {
       "common.cancel": "Cancel",
     }
   },
+  hi: {
+    translation: {
+      "nav.home": "होम",
+      "nav.translate": "अनुवाद",
+      "nav.babyNames": "बच्चों के नाम",
+      "nav.dailyWord": "दैनिक शब्द",
+      "nav.learn": "सीखें",
+      "nav.aiCompanion": "एआई साथी",
+      "nav.donate": "दान करें",
+
+      "hero.title": "संस्कृत की सुंदरता की खोज करें",
+      "hero.subtitle": "प्राचीन ज्ञान और भाषाई सुंदरता का आपका प्रवेश द्वार",
+      "hero.cta": "सीखना शुरू करें",
+
+      "translate.title": "संस्कृत अनुवाद",
+      "translate.placeholder": "संस्कृत में अनुवाद के लिए पाठ दर्ज करें...",
+      "translate.button": "अनुवाद करें",
+      "translate.result": "अनुवाद",
+    }
+  },
+  es: {
+    translation: {
+      "nav.home": "Inicio",
+      "nav.translate": "Traducir",
+      "nav.babyNames": "Nombres de Bebé",
+      "nav.dailyWord": "Palabra Diaria",
+      "nav.learn": "Aprender",
+      "nav.aiCompanion": "Compañero IA",
+      "nav.donate": "Donar",
+
+      "hero.title": "Descubre la Belleza del Sánscrito",
+      "hero.subtitle": "Tu puerta de entrada a la sabiduría antigua y la elegancia lingüística",
+      "hero.cta": "Comenzar a Aprender",
+    }
+  }
 };
 
 i18n
@@ -115,7 +151,14 @@ i18n
       escapeValue: false
     },
     backend: {
-      loadPath: `${TRANSLATIONS_API}/{{lng}}`,
+      loadPath: (lngs: string[], namespaces: string[]) => {
+        const lng = lngs[0];
+        // Don't load English from backend, we have it locally
+        if (lng === 'en') {
+          return '';
+        }
+        return `${TRANSLATIONS_API}/${lng}`;
+      },
       parse: (data: string) => {
         try {
           const parsed = JSON.parse(data);
@@ -127,11 +170,21 @@ i18n
         }
       },
       crossDomain: true,
+      // Allow empty responses for English
+      allowMultiLoading: false,
+      // Request timeout
+      requestOptions: {
+        mode: 'cors',
+        credentials: 'omit',
+        cache: 'default'
+      }
     },
     // Load translations on language change
     load: 'currentOnly',
-    // Don't load English from backend (we have it locally)
+    // Don't preload any languages
     preload: [],
+    // Merge loaded resources with existing ones
+    partialBundledLanguages: true,
   });
 
 export default i18n;
