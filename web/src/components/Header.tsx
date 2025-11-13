@@ -192,6 +192,29 @@ export function Header() {
                           </div>
                         )}
                       </div>
+                      <Link
+                        to="/account"
+                        onClick={() => setShowUserMenu(false)}
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          textDecoration: 'none',
+                          fontSize: '14px',
+                          color: 'var(--foreground)',
+                          borderBottom: '1px solid var(--border)'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = 'var(--muted)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = 'transparent';
+                        }}
+                      >
+                        <User style={{ marginRight: '8px', width: '16px', height: '16px' }} />
+                        <span>My Account</span>
+                      </Link>
                       <button
                         onClick={() => {
                           logout();

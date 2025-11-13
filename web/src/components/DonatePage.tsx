@@ -12,7 +12,7 @@ const CHECKOUT_API = import.meta.env.VITE_CHECKOUT_API_ENDPOINT?.trim() ||
 
 export function DonatePage() {
   const { t } = useTranslation();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const [donationType, setDonationType] = useState<'one-time' | 'monthly'>('one-time');
   const [amount, setAmount] = useState('25');
   const [customAmount, setCustomAmount] = useState('');
@@ -35,6 +35,12 @@ export function DonatePage() {
   }, [isSuccess, isAuthenticated]);
 
   const handleDonate = async () => {
+    // Require authentication for recurring donations
+    if (donationType === 'monthly' && !isAuthenticated) {
+      toast.error('Please sign in to set up recurring donations. This allows you to manage your subscription anytime.');
+      return;
+    }
+
     const finalAmount = customAmount || amount;
     const amountInCents = parseFloat(finalAmount) * 100;
 
@@ -54,6 +60,7 @@ export function DonatePage() {
           amount: amountInCents,
           type: donationType,
           testMode: isTestMode,
+          customerEmail: user?.email, // Include email for subscription management
           successUrl: `${window.location.origin}/donate?success=true${isTestMode ? '&test=true' : ''}`,
           cancelUrl: `${window.location.origin}/donate?canceled=true${isTestMode ? '&test=true' : ''}`,
         }),

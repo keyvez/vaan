@@ -150,7 +150,7 @@ export default {
     // Create Stripe Checkout Session
     if (url.pathname === "/api/create-checkout-session" && request.method === "POST") {
       try {
-        const { amount, type, testMode, successUrl, cancelUrl } = await request.json();
+        const { amount, type, testMode, successUrl, cancelUrl, customerEmail } = await request.json();
 
         // Select appropriate Stripe key based on test mode
         const stripeKey = testMode ? env.STRIPE_TEST_SECRET_KEY : env.STRIPE_SECRET_KEY;
@@ -167,7 +167,8 @@ export default {
           amount,
           type,
           successUrl,
-          cancelUrl
+          cancelUrl,
+          customerEmail
         );
 
         return jsonResponse({ url: session.url });
@@ -747,7 +748,7 @@ async function processTranslationsBatch(env, languageCode) {
  * @param {string} cancelUrl - URL to redirect on cancel
  * @returns {Promise<Object>} Stripe session object
  */
-async function createStripeCheckoutSession(secretKey, amount, type, successUrl, cancelUrl) {
+async function createStripeCheckoutSession(secretKey, amount, type, successUrl, cancelUrl, customerEmail) {
   const isRecurring = type === 'monthly';
 
   // Build URL-encoded body manually for Stripe API
@@ -755,6 +756,11 @@ async function createStripeCheckoutSession(secretKey, amount, type, successUrl, 
   params.append('mode', isRecurring ? 'subscription' : 'payment');
   params.append('success_url', successUrl);
   params.append('cancel_url', cancelUrl);
+
+  // Add customer email if provided (for subscription management)
+  if (customerEmail) {
+    params.append('customer_email', customerEmail);
+  }
 
   // Add line items with nested structure
   params.append('line_items[0][price_data][currency]', 'usd');

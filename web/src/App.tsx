@@ -16,6 +16,7 @@ import { DailyWordPage } from './components/DailyWordPage';
 import { LearnPage } from './components/LearnPage';
 import { AICompanionPage } from './components/AICompanionPage';
 import { DonatePage } from './components/DonatePage';
+import { AccountPage } from './components/AccountPage';
 import { Toaster } from './components/ui/sonner';
 
 function AppContent() {
@@ -51,6 +52,7 @@ function AppContent() {
             <Route path="/learn" element={<LearnPage />} />
             <Route path="/ai-companion" element={<AICompanionPage />} />
             <Route path="/donate" element={<DonatePage />} />
+            <Route path="/account" element={<AccountPage />} />
           </Routes>
         </main>
 
