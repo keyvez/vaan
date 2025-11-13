@@ -1,0 +1,22 @@
+-- Populate baby_names table with initial data
+INSERT INTO baby_names (name, gender, meaning, pronunciation, story, first_letter) VALUES
+  ('Aarav', 'boy', 'Peaceful, wisdom', 'aa-rav', 'Derived from the Sanskrit root ''rav'' meaning peace or melody. Represents calm and tranquility.', 'A'),
+  ('Aditi', 'girl', 'Boundless, mother of gods', 'a-di-ti', 'In Vedic tradition, Aditi is the mother of the divine Adityas. Symbolizes infinity and freedom.', 'A'),
+  ('Arjun', 'boy', 'Bright, shining, white', 'ar-jun', 'The legendary archer from Mahabharata. Symbolizes valor, skill, and devotion.', 'A'),
+  ('Ananya', 'girl', 'Unique, incomparable', 'a-nan-ya', 'Represents uniqueness and divine nature. Often used to describe the supreme being.', 'A'),
+  ('Dev', 'boy', 'God, divine', 'dev', 'Represents divinity and celestial beings. A name that carries spiritual significance.', 'D'),
+  ('Diya', 'girl', 'Lamp, light', 'dee-ya', 'Symbol of knowledge and wisdom. Represents the light that dispels darkness.', 'D'),
+  ('Ishaan', 'boy', 'Lord Shiva, sun', 'i-shaan', 'One of the names of Lord Shiva. Represents prosperity and guardian of the northeast.', 'I'),
+  ('Kavya', 'girl', 'Poetry, poetic creation', 'kav-ya', 'Represents literary beauty and artistic expression. Derived from the word for epic poetry.', 'K'),
+  ('Krishna', 'boy', 'Dark, black, all-attractive', 'krish-na', 'The divine incarnation of Lord Vishnu. Represents love, compassion, and divine play.', 'K'),
+  ('Lakshmi', 'girl', 'Goddess of wealth and prosperity', 'laksh-mi', 'The goddess of wealth, fortune, and prosperity. Symbolizes abundance and grace.', 'L'),
+  ('Naksh', 'boy', 'Moon, map, feature', 'naksh', 'Represents celestial beauty and distinctive characteristics.', 'N'),
+  ('Nisha', 'girl', 'Night', 'ni-sha', 'Represents the peaceful and serene quality of night.', 'N'),
+  ('Om', 'boy', 'Sacred sound, universal', 'om', 'The primordial sound of the universe. Represents cosmic consciousness.', 'O'),
+  ('Priya', 'girl', 'Beloved, dear', 'pri-ya', 'Represents love and affection. A name that signifies being cherished.', 'P'),
+  ('Rishi', 'boy', 'Sage, wise person', 'ri-shi', 'Represents ancient seers and scholars. Symbolizes wisdom and spiritual knowledge.', 'R'),
+  ('Saanvi', 'girl', 'Goddess Lakshmi, knowledge', 'saan-vi', 'Represents wisdom and divine blessings. Associated with Goddess Lakshmi.', 'S'),
+  ('Veda', 'boy', 'Sacred knowledge', 've-da', 'Represents the ancient scriptures and supreme knowledge.', 'V'),
+  ('Vedika', 'girl', 'Altar, consciousness', 've-di-ka', 'Represents sacred space and spiritual consciousness.', 'V'),
+  ('Yash', 'boy', 'Fame, glory, success', 'yash', 'Represents achievement and recognition. Symbolizes honor and respect.', 'Y'),
+  ('Zara', 'girl', 'Princess, flower', 'za-ra', 'Represents royalty and natural beauty.', 'Z');
