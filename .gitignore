@@ -52,6 +52,8 @@ coverage/
 # Cloudflare
 .dev.vars
 .wrangler/
+.wrangler-logs/
+wrangler.toml.local
 
 # Database
 *.db
@@ -65,3 +67,40 @@ data/
 
 # Misc
 *.tsbuildinfo
+
+# Lock files (keep only one type)
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Rust (for og-image-worker)
+**/target/
+**/*.rs.bk
+Cargo.lock
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+
+# MacOS
+*.DS_Store
+.AppleDouble
+.LSOverride
+
+# Thumbnails
+._*
+
+# Files that might appear in the root of a volume
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
