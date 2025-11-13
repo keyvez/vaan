@@ -51,7 +51,7 @@ export function HomePage() {
   return (
     <>
       <SEO
-        title="Vaan - Discover the Beauty of Sanskrit"
+        title="संस्कृत रोज़ - Discover the Beauty of Sanskrit"
         description="Your gateway to ancient Sanskrit wisdom. Learn Sanskrit, find meaningful baby names, practice daily, and explore the language with AI assistance."
         url="/"
       />

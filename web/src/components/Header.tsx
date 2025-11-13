@@ -50,9 +50,9 @@ export function Header() {
             className="flex items-center space-x-2 hover:opacity-70 transition-opacity"
           >
             <div className="w-8 h-8 border-2 border-foreground flex items-center justify-center">
-              <span className="text-xs">वा</span>
+              <span className="text-xs">सं</span>
             </div>
-            <span className="text-lg">Vaan</span>
+            <span className="text-lg">संस्कृत रोज़</span>
           </Link>
 
           {/* Desktop Navigation */}

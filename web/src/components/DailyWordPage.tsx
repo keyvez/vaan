@@ -67,7 +67,7 @@ export function DailyWordPage() {
   const handleShare = async (platform: string) => {
     if (!word) return;
 
-    const shareUrl = `https://vaan.pages.dev/daily-word`;
+    const shareUrl = `https://sanskritaaj.pages.dev/daily-word`;
     const shareText = `Today's Sanskrit Word: ${word.word} (${word.primaryMeaning})`;
 
     const urls: { [key: string]: string } = {
@@ -118,8 +118,8 @@ export function DailyWordPage() {
       `meaning=${encodeURIComponent(word.primaryMeaning)}`
     : 'https://vaan-og-images.keyvez.workers.dev/word/0?sanskrit=Sanskrit&transliteration=sanskrit&meaning=Ancient%20language';
   const pageTitle = word
-    ? `${word.word} - Daily Sanskrit Word | Vaan`
-    : 'Daily Sanskrit Word | Vaan';
+    ? `${word.word} - Daily Sanskrit Word | संस्कृत रोज़`
+    : 'Daily Sanskrit Word | संस्कृत रोज़';
   const pageDescription = word
     ? `${word.word} (${word.transliteration || word.word}) - ${word.primaryMeaning}. Learn a new Sanskrit word every day.`
     : 'Learn a new Sanskrit word every day with pronunciation, meaning, and cultural context.';

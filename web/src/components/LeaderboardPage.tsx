@@ -56,7 +56,7 @@ export function LeaderboardPage() {
   return (
     <>
       <SEO
-        title="Baby Names Leaderboard | Vaan"
+        title="Baby Names Leaderboard | संस्कृत रोज़"
         description="Discover the most popular Sanskrit baby names, sorted by letter and community favorites."
         url="/leaderboard"
       />

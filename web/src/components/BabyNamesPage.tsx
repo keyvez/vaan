@@ -84,7 +84,7 @@ export function BabyNamesPage() {
   return (
     <>
       <SEO
-        title="Sanskrit Baby Names - Find Meaningful Names | Vaan"
+        title="Sanskrit Baby Names - Find Meaningful Names | संस्कृत रोज़"
         description="Discover beautiful Sanskrit baby names with deep meanings, pronunciation guides, and cultural stories. Find the perfect name for your baby."
         url="/baby-names"
       />

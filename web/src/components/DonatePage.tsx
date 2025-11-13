@@ -148,7 +148,7 @@ export function DonatePage() {
               <div>
                 <h4 className="mb-1">Make Learning Accessible</h4>
                 <p className="text-sm text-muted-foreground">
-                  Your donations help us keep Vaan free and accessible to learners worldwide, regardless of their financial situation.
+                  Your donations help us keep संस्कृत रोज़ free and accessible to learners worldwide, regardless of their financial situation.
                 </p>
               </div>
             </div>

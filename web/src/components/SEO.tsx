@@ -27,7 +27,7 @@ export function SEO({ title, description, image, url, type = 'website' }: SEOPro
       <meta property="og:image" content={ogImage} />
       <meta property="og:image:width" content="1200" />
       <meta property="og:image:height" content="630" />
-      <meta property="og:site_name" content="Vaan" />
+      <meta property="og:site_name" content="संस्कृत रोज़" />
 
       {/* Twitter Card */}
       <meta name="twitter:card" content="summary_large_image" />

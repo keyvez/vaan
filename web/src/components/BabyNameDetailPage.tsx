@@ -114,7 +114,7 @@ export function BabyNameDetailPage() {
   return (
     <>
       <SEO
-        title={`${displayName} - Sanskrit Baby Name | Vaan`}
+        title={`${displayName} - Sanskrit Baby Name | संस्कृत रोज़`}
         description={`${displayName} (${name.pronunciation}) - ${name.meaning}. Discover the meaning and cultural significance of this beautiful Sanskrit name.`}
         image={ogImageUrl}
         url={`/baby-names/${slug}`}

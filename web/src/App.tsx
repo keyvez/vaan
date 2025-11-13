@@ -61,9 +61,9 @@ function AppContent() {
               <div>
                 <div className="flex items-center space-x-2 mb-4">
                   <div className="w-8 h-8 border-2 border-foreground flex items-center justify-center">
-                    <span className="text-xs">वा</span>
+                    <span className="text-xs">सं</span>
                   </div>
-                  <span className="text-lg">Vaan</span>
+                  <span className="text-lg">संस्कृत रोज़</span>
                 </div>
                 <p className="text-sm text-muted-foreground">
                   Your gateway to ancient Sanskrit wisdom
@@ -120,7 +120,7 @@ function AppContent() {
             </div>
 
             <div className="mt-8 pt-8 border-t border-border text-center text-sm text-muted-foreground">
-              <p>© 2025 Vaan. Preserving Sanskrit for future generations.</p>
+              <p>© 2025 संस्कृत रोज़. Preserving Sanskrit for future generations.</p>
             </div>
           </div>
         </footer>
