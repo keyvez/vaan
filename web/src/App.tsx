@@ -10,6 +10,7 @@ import { HomePage } from './components/HomePage';
 import { TranslatePage } from './components/TranslatePage';
 import { BabyNamesPage } from './components/BabyNamesPage';
 import { BabyNameDetailPage } from './components/BabyNameDetailPage';
+import { BabyNamesRouter } from './components/BabyNamesRouter';
 import { LeaderboardPage } from './components/LeaderboardPage';
 import { DailyWordPage } from './components/DailyWordPage';
 import { LearnPage } from './components/LearnPage';
@@ -44,7 +45,7 @@ function AppContent() {
             <Route path="/" element={<HomePage />} />
             <Route path="/translate" element={<TranslatePage />} />
             <Route path="/baby-names" element={<BabyNamesPage />} />
-            <Route path="/baby-names/:slug" element={<BabyNameDetailPage />} />
+            <Route path="/baby-names/:letter" element={<BabyNamesRouter />} />
             <Route path="/leaderboard" element={<LeaderboardPage />} />
             <Route path="/daily-word" element={<DailyWordPage />} />
             <Route path="/learn" element={<LearnPage />} />

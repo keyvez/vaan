@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { Input } from './ui/input';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
@@ -28,14 +28,25 @@ const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 
 export function BabyNamesPage() {
   const { t } = useTranslation();
-  const [searchParams] = useSearchParams();
+  const { letter: letterParam } = useParams<{ letter?: string }>();
   const [searchQuery, setSearchQuery] = useState('');
   const [genderFilter, setGenderFilter] = useState<'all' | 'boy' | 'girl'>('all');
-  const [letterFilter, setLetterFilter] = useState<string>(searchParams.get('letter') || '');
+  const [letterFilter, setLetterFilter] = useState<string>(
+    letterParam && letterParam.length === 1 ? letterParam.toUpperCase() : ''
+  );
   const [names, setNames] = useState<BabyName[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { toggleLike, isLiked, showSignInDialog, setShowSignInDialog } = useLikes();
+
+  // Update letter filter when route param changes
+  useEffect(() => {
+    if (letterParam && letterParam.length === 1) {
+      setLetterFilter(letterParam.toUpperCase());
+    } else if (!letterParam) {
+      setLetterFilter('');
+    }
+  }, [letterParam]);
 
   const fetchNames = useCallback(async () => {
     setLoading(true);
@@ -138,26 +149,27 @@ export function BabyNamesPage() {
               Browse by first letter
             </div>
             <div className="flex flex-wrap justify-center gap-1">
-              <Button
-                variant={letterFilter === '' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setLetterFilter('')}
-                className={letterFilter === '' ? 'bg-foreground text-background' : 'border-foreground'}
-                disabled={loading}
-              >
-                All
-              </Button>
-              {LETTERS.map((letter) => (
+              <Link to="/baby-names">
                 <Button
-                  key={letter}
-                  variant={letterFilter === letter ? 'default' : 'outline'}
+                  variant={letterFilter === '' ? 'default' : 'outline'}
                   size="sm"
-                  onClick={() => setLetterFilter(letter)}
-                  className={letterFilter === letter ? 'bg-foreground text-background' : 'border-foreground'}
+                  className={letterFilter === '' ? 'bg-foreground text-background' : 'border-foreground'}
                   disabled={loading}
                 >
-                  {letter}
+                  All
                 </Button>
+              </Link>
+              {LETTERS.map((letter) => (
+                <Link key={letter} to={`/baby-names/${letter.toLowerCase()}`}>
+                  <Button
+                    variant={letterFilter === letter ? 'default' : 'outline'}
+                    size="sm"
+                    className={letterFilter === letter ? 'bg-foreground text-background' : 'border-foreground'}
+                    disabled={loading}
+                  >
+                    {letter}
+                  </Button>
+                </Link>
               ))}
             </div>
           </div>

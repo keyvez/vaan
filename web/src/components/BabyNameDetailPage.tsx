@@ -19,7 +19,7 @@ interface BabyName {
 }
 
 export function BabyNameDetailPage() {
-  const { slug } = useParams<{ slug: string }>();
+  const { letter: slug } = useParams<{ letter: string }>();
   const [name, setName] = useState<BabyName | null>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
