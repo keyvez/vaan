@@ -59,7 +59,7 @@ export function HomePage() {
       />
       <div className="min-h-screen">
         {/* Hero Section */}
-        <section className="border-b border-border">
+        <section>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-32">
           <div className="max-w-3xl mx-auto text-center">
             <h1 className="text-4xl md:text-6xl mb-6">
@@ -81,7 +81,7 @@ export function HomePage() {
 
       {/* Sign Up Section - Only show if not authenticated */}
       {!isAuthenticated && (
-        <section className="py-16 bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-950 dark:to-amber-950 border-b border-border">
+        <section className="py-16 bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-950 dark:to-amber-950">
           <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
             <Card className="p-8 md:p-12 border-2 border-orange-200 dark:border-orange-800 shadow-lg">
               <div className="flex flex-col md:flex-row items-center gap-8">
