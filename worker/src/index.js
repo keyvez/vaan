@@ -745,32 +745,27 @@ async function processTranslationsBatch(env, languageCode) {
 async function createStripeCheckoutSession(secretKey, amount, type, successUrl, cancelUrl) {
   const isRecurring = type === 'monthly';
 
-  // Create line item based on donation type
-  const lineItems = [{
-    price_data: {
-      currency: 'usd',
-      product_data: {
-        name: isRecurring ? 'Monthly Donation to संस्कृत रोज़' : 'Donation to संस्कृत रोज़',
-        description: isRecurring
-          ? 'Support Sanskrit language preservation with a monthly contribution'
-          : 'One-time contribution to support Sanskrit language preservation',
-      },
-      unit_amount: amount,
-      ...(isRecurring && {
-        recurring: {
-          interval: 'month',
-        },
-      }),
-    },
-    quantity: 1,
-  }];
+  // Build URL-encoded body manually for Stripe API
+  const params = new URLSearchParams();
+  params.append('mode', isRecurring ? 'subscription' : 'payment');
+  params.append('success_url', successUrl);
+  params.append('cancel_url', cancelUrl);
 
-  const sessionData = {
-    mode: isRecurring ? 'subscription' : 'payment',
-    line_items: lineItems,
-    success_url: successUrl,
-    cancel_url: cancelUrl,
-  };
+  // Add line items with nested structure
+  params.append('line_items[0][price_data][currency]', 'usd');
+  params.append('line_items[0][price_data][product_data][name]',
+    isRecurring ? 'Monthly Donation to संस्कृत रोज़' : 'Donation to संस्कृत रोज़');
+  params.append('line_items[0][price_data][product_data][description]',
+    isRecurring
+      ? 'Support Sanskrit language preservation with a monthly contribution'
+      : 'One-time contribution to support Sanskrit language preservation');
+  params.append('line_items[0][price_data][unit_amount]', amount.toString());
+
+  if (isRecurring) {
+    params.append('line_items[0][price_data][recurring][interval]', 'month');
+  }
+
+  params.append('line_items[0][quantity]', '1');
 
   // Create Stripe Checkout Session
   const response = await fetch('https://api.stripe.com/v1/checkout/sessions', {
@@ -779,7 +774,7 @@ async function createStripeCheckoutSession(secretKey, amount, type, successUrl, 
       'Authorization': `Bearer ${secretKey}`,
       'Content-Type': 'application/x-www-form-urlencoded',
     },
-    body: new URLSearchParams(sessionData).toString(),
+    body: params.toString(),
   });
 
   if (!response.ok) {
