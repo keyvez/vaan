@@ -1,0 +1,11 @@
+name = "vaan-wordlist"
+main = "worker/src/index.js"
+compatibility_date = "2024-01-01"
+
+[[d1_databases]]
+binding = "VAAN_LEXICON_DB"
+database_name = "vaan_sanskrit_lexicon"
+database_id = "7e1dac7b-77b7-4659-ac6e-1f952da4d293"
+
+[vars]
+# GEMINI_API_KEY is set in Cloudflare dashboard as a secret
