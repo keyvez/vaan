@@ -108,33 +108,47 @@ export function AICompanionPage() {
           </p>
         </div>
 
-        {/* Sign Up Section - Only show if not authenticated */}
-        {!isAuthenticated && (
-          <Card className="p-6 mb-6 border-2 border-orange-200 dark:border-orange-800 bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-950 dark:to-amber-950">
-            <div className="flex flex-col sm:flex-row items-center gap-4 text-center sm:text-left">
-              <div className="flex-shrink-0">
-                <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-amber-500 rounded-full flex items-center justify-center">
-                  <Sparkles className="h-6 w-6 text-white" />
-                </div>
+        {/* Sign Up Required - Show if not authenticated */}
+        {!isAuthenticated ? (
+          <Card className="p-8 md:p-12 border-2 border-orange-200 dark:border-orange-800 bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-950 dark:to-amber-950">
+            <div className="text-center">
+              <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-orange-500 to-amber-500 rounded-full mb-6">
+                <Sparkles className="h-10 w-10 text-white" />
               </div>
-              <div className="flex-1">
-                <h3 className="text-lg font-bold mb-1">Unlock Personalized AI Learning</h3>
-                <p className="text-sm text-muted-foreground mb-3">
-                  Sign up to save your conversation history, get tailored recommendations, and access advanced AI features.
-                </p>
+              <h2 className="text-2xl md:text-3xl font-bold mb-4">Sign Up to Access AI Companion</h2>
+              <p className="text-lg text-muted-foreground mb-6 max-w-2xl mx-auto">
+                Sanskrit Saṃvāda is your personalized AI learning companion. Create a free account to unlock:
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 text-left">
+                <div>
+                  <div className="font-semibold mb-2">💬 Interactive Conversations</div>
+                  <p className="text-sm text-muted-foreground">Practice Sanskrit through natural dialogue with AI guidance</p>
+                </div>
+                <div>
+                  <div className="font-semibold mb-2">📚 Grammar Breakdowns</div>
+                  <p className="text-sm text-muted-foreground">Get detailed explanations of Sanskrit grammar and word structure</p>
+                </div>
+                <div>
+                  <div className="font-semibold mb-2">💾 Conversation History</div>
+                  <p className="text-sm text-muted-foreground">Save and review your learning journey over time</p>
+                </div>
               </div>
               <Button
                 onClick={login}
-                className="bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white whitespace-nowrap"
+                size="lg"
+                className="bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white"
               >
-                <User className="mr-2 h-4 w-4" />
-                Sign Up Free
+                <User className="mr-2 h-5 w-5" />
+                Sign Up Free with Google
               </Button>
+              <p className="text-sm text-muted-foreground mt-4">
+                Takes less than 30 seconds • No credit card required
+              </p>
             </div>
           </Card>
-        )}
-
-        {/* Controls */}
+        ) : (
+          <>
+            {/* Controls */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
           <div>
             <label className="block text-sm mb-2">{t('ai.mode')}</label>
@@ -247,30 +261,32 @@ export function AICompanionPage() {
           </div>
         </Card>
 
-        {/* Info */}
-        <div className="mt-8 p-6 border border-border rounded-lg">
-          <h3 className="mb-4">About Sanskrit Saṃvāda</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
-            <div>
-              <h4 className="mb-2">Practice Mode</h4>
-              <p className="text-muted-foreground">
-                Learn conversational Sanskrit with prompts and corrections
-              </p>
+            {/* Info */}
+            <div className="mt-8 p-6 border border-border rounded-lg">
+              <h3 className="mb-4">About Sanskrit Saṃvāda</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
+                <div>
+                  <h4 className="mb-2">Practice Mode</h4>
+                  <p className="text-muted-foreground">
+                    Learn conversational Sanskrit with prompts and corrections
+                  </p>
+                </div>
+                <div>
+                  <h4 className="mb-2">Story Mode</h4>
+                  <p className="text-muted-foreground">
+                    Build narratives and explore mythology sentence by sentence
+                  </p>
+                </div>
+                <div>
+                  <h4 className="mb-2">Composition Mode</h4>
+                  <p className="text-muted-foreground">
+                    Create prayers, poems, and slogans with proper grammar
+                  </p>
+                </div>
+              </div>
             </div>
-            <div>
-              <h4 className="mb-2">Story Mode</h4>
-              <p className="text-muted-foreground">
-                Build narratives and explore mythology sentence by sentence
-              </p>
-            </div>
-            <div>
-              <h4 className="mb-2">Composition Mode</h4>
-              <p className="text-muted-foreground">
-                Create prayers, poems, and slogans with proper grammar
-              </p>
-            </div>
-          </div>
-        </div>
+          </>
+        )}
       </div>
     </div>
   );
