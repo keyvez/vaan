@@ -274,19 +274,19 @@ export function DonatePage() {
           <Card className="p-6 text-center">
             <div className="text-3xl mb-2">$2</div>
             <p className="text-sm text-muted-foreground">
-              Supports daily word creation for one week
+              Supports site hosting server fees
             </p>
           </Card>
           <Card className="p-6 text-center">
             <div className="text-3xl mb-2">$5</div>
             <p className="text-sm text-muted-foreground">
-              Helps maintain our Sanskrit database
+              Helps maintain and improve Sanskrit database
             </p>
           </Card>
           <Card className="p-6 text-center">
             <div className="text-3xl mb-2">$10</div>
             <p className="text-sm text-muted-foreground">
-              Funds AI companion improvements
+              Funds AI companion maintenance and improvements
             </p>
           </Card>
         </div>
