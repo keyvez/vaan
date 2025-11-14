@@ -461,6 +461,10 @@ async function processBatchResults(env, lexemes) {
             result.gender,
             result.story,
             result.reasoning,
+            result.improvedTranslation,
+            result.examplePhrase,
+            result.difficultyLevel,
+            result.quizChoices,
           );
         }
       } catch (error) {
@@ -495,6 +499,10 @@ For each word, respond with:
 - gender: string ("boy", "girl", or "unisex") - only if suitable is true, otherwise null
 - reasoning: string (brief explanation of why this is or isn't suitable as a baby name)
 - story: string (if suitable, provide 1-2 sentences of cultural or mythological context) - otherwise null
+- improved_translation: string (provide an improved, more accurate English translation that captures nuances)
+- example_phrase: string (provide a simple Sanskrit phrase or sentence where this word is commonly used, with English translation)
+- difficulty_level: string ("beginner", "intermediate", or "advanced") - for Sanskrit learners
+- quiz_choices: array of 3 strings (3 plausible but incorrect meanings for multiple choice quiz)
 
 Criteria for suitability:
 1. The word should have a positive or neutral meaning
@@ -503,6 +511,10 @@ Criteria for suitability:
 4. Consider traditional usage in Sanskrit/Hindu naming conventions
 5. Determine the grammatical gender in Sanskrit to suggest appropriate gender for the name
 6. Names of deities, virtues, natural phenomena with positive connotations are usually suitable
+
+For the improved_translation, provide a translation that is more precise and captures cultural/spiritual nuances.
+For the example_phrase, use simple Sanskrit like "सः/सा [word] अस्ति" or provide a common usage from texts.
+For quiz_choices, make them plausible wrong answers that test understanding.
 
 Analyze these words:
 `;
@@ -540,8 +552,15 @@ Analyze these words:
                     gender: { type: "string", nullable: true },
                     reasoning: { type: "string" },
                     story: { type: "string", nullable: true },
+                    improved_translation: { type: "string" },
+                    example_phrase: { type: "string" },
+                    difficulty_level: { type: "string" },
+                    quiz_choices: {
+                      type: "array",
+                      items: { type: "string" },
+                    },
                   },
-                  required: ["suitable", "reasoning"],
+                  required: ["suitable", "reasoning", "improved_translation", "example_phrase", "difficulty_level", "quiz_choices"],
                 },
               },
             },
@@ -573,6 +592,10 @@ Analyze these words:
     suitable: result.suitable === true,
     gender: result.gender || null,
     story: result.story || null,
+    improvedTranslation: result.improved_translation || null,
+    examplePhrase: result.example_phrase || null,
+    difficultyLevel: result.difficulty_level || null,
+    quizChoices: result.quiz_choices || [],
     reasoning: result.reasoning || "No reasoning provided",
   }));
 }
@@ -594,7 +617,7 @@ function generateSlug(text, id) {
   return slug;
 }
 
-async function saveBabyName(env, lexeme, gender, story, reasoning) {
+async function saveBabyName(env, lexeme, gender, story, reasoning, improvedTranslation, examplePhrase, difficultyLevel, quizChoices) {
   const firstLetter = (lexeme.transliteration ||
     lexeme.sanskrit)[0].toUpperCase();
 
@@ -608,10 +631,13 @@ async function saveBabyName(env, lexeme, gender, story, reasoning) {
 
   const slug = existingSlug ? `${baseSlug}-${lexeme.id}` : baseSlug;
 
+  // Convert quiz choices array to JSON string for storage
+  const quizChoicesJson = JSON.stringify(quizChoices || []);
+
   await env.VAAN_LEXICON_DB.prepare(
     `
-    INSERT INTO baby_names (name, slug, gender, meaning, pronunciation, story, reasoning, first_letter, lexeme_id)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO baby_names (name, slug, gender, meaning, pronunciation, story, reasoning, first_letter, lexeme_id, improved_translation, example_phrase, difficulty_level, quiz_choices)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `,
   )
     .bind(
@@ -624,6 +650,10 @@ async function saveBabyName(env, lexeme, gender, story, reasoning) {
       reasoning,
       firstLetter,
       lexeme.id,
+      improvedTranslation,
+      examplePhrase,
+      difficultyLevel,
+      quizChoicesJson,
     )
     .run();
 
