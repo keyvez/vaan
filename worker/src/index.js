@@ -147,6 +147,21 @@ export default {
       }
     }
 
+    // Get learning words with improved data
+    if (url.pathname === "/api/learning-words" && request.method === "GET") {
+      try {
+        const searchParams = url.searchParams;
+        const difficulty = searchParams.get("difficulty") || "beginner";
+        const limit = parseInt(searchParams.get("limit") || "20");
+
+        const words = await getLearningWords(env, difficulty, limit);
+        return jsonResponse({ words });
+      } catch (error) {
+        console.error("Failed to retrieve learning words", error);
+        return jsonResponse({ error: "Unable to retrieve learning words" }, 500);
+      }
+    }
+
     // Create Stripe Checkout Session
     if (url.pathname === "/api/create-checkout-session" && request.method === "POST") {
       try {
@@ -666,6 +681,34 @@ async function getBabyNameBySlug(env, slug) {
   ).bind(slug).first();
 
   return result || null;
+}
+
+async function getLearningWords(env, difficulty, limit) {
+  // Fetch baby names that have been enhanced with learning data
+  const { results } = await env.VAAN_LEXICON_DB.prepare(
+    `SELECT
+      name as sanskrit,
+      pronunciation as transliteration,
+      improved_translation,
+      meaning,
+      example_phrase,
+      difficulty_level,
+      quiz_choices,
+      story
+    FROM baby_names
+    WHERE difficulty_level = ?
+      AND improved_translation IS NOT NULL
+      AND example_phrase IS NOT NULL
+      AND quiz_choices IS NOT NULL
+    ORDER BY RANDOM()
+    LIMIT ?`
+  ).bind(difficulty, limit).all();
+
+  // Parse quiz_choices JSON for each word
+  return (results || []).map(word => ({
+    ...word,
+    quiz_choices: word.quiz_choices ? JSON.parse(word.quiz_choices) : []
+  }));
 }
 
 function jsonResponse(body, status = 200) {
