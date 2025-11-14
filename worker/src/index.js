@@ -162,6 +162,93 @@ export default {
       }
     }
 
+    // Upsert user (create or update user on login)
+    if (url.pathname === "/api/user/upsert" && request.method === "POST") {
+      try {
+        const { id, email, name, picture } = await request.json();
+
+        if (!id || !email) {
+          return jsonResponse({ error: "User ID and email are required" }, 400);
+        }
+
+        await upsertUser(env, id, email, name, picture);
+        return jsonResponse({ success: true });
+      } catch (error) {
+        console.error("Failed to upsert user", error);
+        return jsonResponse({ error: "Unable to save user" }, 500);
+      }
+    }
+
+    // Get user learning progress
+    if (url.pathname === "/api/user/progress" && request.method === "GET") {
+      try {
+        const searchParams = url.searchParams;
+        const userId = searchParams.get("userId");
+
+        if (!userId) {
+          return jsonResponse({ error: "User ID is required" }, 400);
+        }
+
+        const progress = await getUserProgress(env, userId);
+        return jsonResponse(progress);
+      } catch (error) {
+        console.error("Failed to retrieve user progress", error);
+        return jsonResponse({ error: "Unable to retrieve user progress" }, 500);
+      }
+    }
+
+    // Record flashcard review
+    if (url.pathname === "/api/user/flashcard-review" && request.method === "POST") {
+      try {
+        const { userId, babyNameId, confidenceLevel } = await request.json();
+
+        if (!userId || !babyNameId) {
+          return jsonResponse({ error: "User ID and baby name ID are required" }, 400);
+        }
+
+        await recordFlashcardReview(env, userId, babyNameId, confidenceLevel);
+        return jsonResponse({ success: true });
+      } catch (error) {
+        console.error("Failed to record flashcard review", error);
+        return jsonResponse({ error: "Unable to record review" }, 500);
+      }
+    }
+
+    // Record quiz attempt
+    if (url.pathname === "/api/user/quiz-attempt" && request.method === "POST") {
+      try {
+        const { userId, babyNameId, correct, difficultyLevel, timeTakenMs } = await request.json();
+
+        if (!userId || !babyNameId || correct === undefined) {
+          return jsonResponse({ error: "User ID, baby name ID, and correct status are required" }, 400);
+        }
+
+        await recordQuizAttempt(env, userId, babyNameId, correct, difficultyLevel, timeTakenMs);
+        return jsonResponse({ success: true });
+      } catch (error) {
+        console.error("Failed to record quiz attempt", error);
+        return jsonResponse({ error: "Unable to record quiz attempt" }, 500);
+      }
+    }
+
+    // Get user statistics
+    if (url.pathname === "/api/user/stats" && request.method === "GET") {
+      try {
+        const searchParams = url.searchParams;
+        const userId = searchParams.get("userId");
+
+        if (!userId) {
+          return jsonResponse({ error: "User ID is required" }, 400);
+        }
+
+        const stats = await getUserStats(env, userId);
+        return jsonResponse(stats);
+      } catch (error) {
+        console.error("Failed to retrieve user stats", error);
+        return jsonResponse({ error: "Unable to retrieve user stats" }, 500);
+      }
+    }
+
     // Create Stripe Checkout Session
     if (url.pathname === "/api/create-checkout-session" && request.method === "POST") {
       try {
@@ -687,6 +774,7 @@ async function getLearningWords(env, difficulty, limit) {
   // Fetch baby names that have been enhanced with learning data
   const { results } = await env.VAAN_LEXICON_DB.prepare(
     `SELECT
+      id,
       name as sanskrit,
       pronunciation as transliteration,
       improved_translation,
@@ -709,6 +797,178 @@ async function getLearningWords(env, difficulty, limit) {
     ...word,
     quiz_choices: word.quiz_choices ? JSON.parse(word.quiz_choices) : []
   }));
+}
+
+// User management functions
+
+async function upsertUser(env, userId, email, name, pictureUrl) {
+  await env.VAAN_LEXICON_DB.prepare(
+    `INSERT INTO users (id, email, name, picture_url, last_login_at)
+     VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+     ON CONFLICT(id) DO UPDATE SET
+       email = excluded.email,
+       name = excluded.name,
+       picture_url = excluded.picture_url,
+       last_login_at = CURRENT_TIMESTAMP`
+  ).bind(userId, email, name, pictureUrl).run();
+
+  // Initialize user learning progress if doesn't exist
+  await env.VAAN_LEXICON_DB.prepare(
+    `INSERT INTO user_learning_progress (user_id)
+     VALUES (?)
+     ON CONFLICT(user_id) DO NOTHING`
+  ).bind(userId).run();
+}
+
+async function getUserProgress(env, userId) {
+  // Get overall progress
+  const progress = await env.VAAN_LEXICON_DB.prepare(
+    `SELECT
+      current_difficulty_level,
+      total_words_studied,
+      total_flashcards_reviewed,
+      total_quizzes_taken,
+      total_quiz_correct
+    FROM user_learning_progress
+    WHERE user_id = ?`
+  ).bind(userId).first();
+
+  if (!progress) {
+    // Return default progress if user hasn't started learning yet
+    return {
+      current_difficulty_level: 'beginner',
+      total_words_studied: 0,
+      total_flashcards_reviewed: 0,
+      total_quizzes_taken: 0,
+      total_quiz_correct: 0,
+      quiz_accuracy: 0
+    };
+  }
+
+  return {
+    ...progress,
+    quiz_accuracy: progress.total_quizzes_taken > 0
+      ? Math.round((progress.total_quiz_correct / progress.total_quizzes_taken) * 100)
+      : 0
+  };
+}
+
+async function recordFlashcardReview(env, userId, babyNameId, confidenceLevel = 3) {
+  // Ensure user exists
+  await env.VAAN_LEXICON_DB.prepare(
+    `INSERT INTO user_learning_progress (user_id)
+     VALUES (?)
+     ON CONFLICT(user_id) DO NOTHING`
+  ).bind(userId).run();
+
+  // Update or create word progress
+  await env.VAAN_LEXICON_DB.prepare(
+    `INSERT INTO user_word_progress (user_id, baby_name_id, times_reviewed, confidence_level, last_reviewed_at)
+     VALUES (?, ?, 1, ?, CURRENT_TIMESTAMP)
+     ON CONFLICT(user_id, baby_name_id) DO UPDATE SET
+       times_reviewed = times_reviewed + 1,
+       confidence_level = excluded.confidence_level,
+       last_reviewed_at = CURRENT_TIMESTAMP`
+  ).bind(userId, babyNameId, confidenceLevel).run();
+
+  // Update overall stats
+  await env.VAAN_LEXICON_DB.prepare(
+    `UPDATE user_learning_progress
+     SET total_flashcards_reviewed = total_flashcards_reviewed + 1,
+         updated_at = CURRENT_TIMESTAMP
+     WHERE user_id = ?`
+  ).bind(userId).run();
+
+  // Update total_words_studied (count of unique words reviewed)
+  const { count } = await env.VAAN_LEXICON_DB.prepare(
+    `SELECT COUNT(DISTINCT baby_name_id) as count
+     FROM user_word_progress
+     WHERE user_id = ?`
+  ).bind(userId).first();
+
+  await env.VAAN_LEXICON_DB.prepare(
+    `UPDATE user_learning_progress
+     SET total_words_studied = ?
+     WHERE user_id = ?`
+  ).bind(count, userId).run();
+}
+
+async function recordQuizAttempt(env, userId, babyNameId, correct, difficultyLevel, timeTakenMs = null) {
+  // Ensure user exists
+  await env.VAAN_LEXICON_DB.prepare(
+    `INSERT INTO user_learning_progress (user_id)
+     VALUES (?)
+     ON CONFLICT(user_id) DO NOTHING`
+  ).bind(userId).run();
+
+  // Record quiz attempt
+  await env.VAAN_LEXICON_DB.prepare(
+    `INSERT INTO user_quiz_attempts (user_id, baby_name_id, correct, difficulty_level, time_taken_ms)
+     VALUES (?, ?, ?, ?, ?)`
+  ).bind(userId, babyNameId, correct ? 1 : 0, difficultyLevel, timeTakenMs).run();
+
+  // Update overall stats
+  const correctIncrement = correct ? 1 : 0;
+  await env.VAAN_LEXICON_DB.prepare(
+    `UPDATE user_learning_progress
+     SET total_quizzes_taken = total_quizzes_taken + 1,
+         total_quiz_correct = total_quiz_correct + ?,
+         updated_at = CURRENT_TIMESTAMP
+     WHERE user_id = ?`
+  ).bind(correctIncrement, userId).run();
+}
+
+async function getUserStats(env, userId) {
+  // Get overall progress
+  const progress = await getUserProgress(env, userId);
+
+  // Get recent quiz performance (last 10 attempts)
+  const { results: recentQuizzes } = await env.VAAN_LEXICON_DB.prepare(
+    `SELECT
+      qa.correct,
+      qa.difficulty_level,
+      qa.attempted_at,
+      bn.name as word
+    FROM user_quiz_attempts qa
+    JOIN baby_names bn ON qa.baby_name_id = bn.id
+    WHERE qa.user_id = ?
+    ORDER BY qa.attempted_at DESC
+    LIMIT 10`
+  ).bind(userId).all();
+
+  // Get words by confidence level
+  const { results: wordsByConfidence } = await env.VAAN_LEXICON_DB.prepare(
+    `SELECT
+      confidence_level,
+      COUNT(*) as count
+    FROM user_word_progress
+    WHERE user_id = ?
+    GROUP BY confidence_level
+    ORDER BY confidence_level`
+  ).bind(userId).all();
+
+  // Get quiz accuracy by difficulty level
+  const { results: accuracyByDifficulty } = await env.VAAN_LEXICON_DB.prepare(
+    `SELECT
+      difficulty_level,
+      COUNT(*) as total,
+      SUM(correct) as correct
+    FROM user_quiz_attempts
+    WHERE user_id = ?
+    GROUP BY difficulty_level`
+  ).bind(userId).all();
+
+  return {
+    progress,
+    recent_quizzes: recentQuizzes || [],
+    words_by_confidence: wordsByConfidence || [],
+    accuracy_by_difficulty: (accuracyByDifficulty || []).map(stat => ({
+      difficulty_level: stat.difficulty_level,
+      total: stat.total,
+      correct: stat.correct,
+      accuracy: Math.round((stat.correct / stat.total) * 100)
+    }))
+  };
 }
 
 function jsonResponse(body, status = 200) {

@@ -1,16 +1,48 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Progress } from './ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
-import { GraduationCap, RotateCw, Check, X, User, TrendingUp } from 'lucide-react';
-import { flashcards, quizQuestions } from '../lib/sanskrit-data';
+import { GraduationCap, RotateCw, Check, X, User, TrendingUp, Loader2 } from 'lucide-react';
 import { useAuth } from '../lib/auth-context';
+
+const API_BASE = import.meta.env.VITE_API_URL || 'https://vaan-wordlist.keyvez.workers.dev';
+
+interface LearningWord {
+  id: number;
+  sanskrit: string;
+  transliteration: string;
+  improved_translation: string;
+  meaning: string;
+  example_phrase: string;
+  difficulty_level: string;
+  quiz_choices: string[];
+  story: string;
+}
+
+interface Flashcard {
+  id: number;
+  sanskrit: string;
+  transliteration: string;
+  meaning: string;
+}
+
+interface QuizQuestion {
+  id: number;
+  question: string;
+  options: string[];
+  correct: number;
+  sanskrit: string;
+  difficulty: string;
+}
 
 export function LearnPage() {
   const { t } = useTranslation();
-  const { isAuthenticated, login } = useAuth();
+  const { isAuthenticated, login, user } = useAuth();
+  const [words, setWords] = useState<LearningWord[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [difficulty, setDifficulty] = useState<'beginner' | 'intermediate' | 'advanced'>('beginner');
   const [flashcardIndex, setFlashcardIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [quizIndex, setQuizIndex] = useState(0);
@@ -19,6 +51,69 @@ export function LearnPage() {
   const [score, setScore] = useState(0);
   const [completedQuestions, setCompletedQuestions] = useState(0);
 
+  // Fetch learning words on mount and when difficulty changes
+  useEffect(() => {
+    fetchLearningWords();
+  }, [difficulty]);
+
+  // Upsert user on login
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      fetch(`${API_BASE}/api/user/upsert`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          picture: user.picture
+        })
+      }).catch(err => console.error('Failed to upsert user:', err));
+    }
+  }, [isAuthenticated, user]);
+
+  const fetchLearningWords = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(`${API_BASE}/api/learning-words?difficulty=${difficulty}&limit=20`);
+      const data = await response.json();
+      setWords(data.words || []);
+      setFlashcardIndex(0);
+      setQuizIndex(0);
+      setScore(0);
+      setCompletedQuestions(0);
+    } catch (error) {
+      console.error('Failed to fetch learning words:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Convert words to flashcards
+  const flashcards: Flashcard[] = words.map(word => ({
+    id: word.id,
+    sanskrit: word.sanskrit,
+    transliteration: word.transliteration,
+    meaning: word.improved_translation
+  }));
+
+  // Convert words to quiz questions
+  const quizQuestions: QuizQuestion[] = words.map(word => {
+    // Shuffle answer options
+    const allOptions = [word.improved_translation, ...word.quiz_choices];
+    const shuffled = allOptions.sort(() => Math.random() - 0.5);
+    const correctIndex = shuffled.indexOf(word.improved_translation);
+
+    return {
+      id: word.id,
+      question: `What does '${word.sanskrit}' (${word.transliteration}) mean?`,
+      options: shuffled,
+      correct: correctIndex,
+      sanskrit: word.sanskrit,
+      difficulty: word.difficulty_level
+    };
+  });
+
   const currentFlashcard = flashcards[flashcardIndex];
   const currentQuestion = quizQuestions[quizIndex];
 
@@ -26,7 +121,30 @@ export function LearnPage() {
     setIsFlipped(!isFlipped);
   };
 
+  const trackFlashcardReview = async (wordId: number, confidenceLevel: number) => {
+    if (!isAuthenticated || !user) return;
+
+    try {
+      await fetch(`${API_BASE}/api/user/flashcard-review`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.id,
+          babyNameId: wordId,
+          confidenceLevel
+        })
+      });
+    } catch (error) {
+      console.error('Failed to track flashcard review:', error);
+    }
+  };
+
   const nextFlashcard = () => {
+    // Track review if user has seen the card (flipped it)
+    if (isFlipped && currentFlashcard) {
+      trackFlashcardReview(currentFlashcard.id, 3); // Default confidence level
+    }
+
     setIsFlipped(false);
     setFlashcardIndex((prev) => (prev + 1) % flashcards.length);
   };
@@ -41,14 +159,41 @@ export function LearnPage() {
     setSelectedAnswer(index);
   };
 
+  const trackQuizAttempt = async (wordId: number, correct: boolean, difficultyLevel: string) => {
+    if (!isAuthenticated || !user) return;
+
+    try {
+      await fetch(`${API_BASE}/api/user/quiz-attempt`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.id,
+          babyNameId: wordId,
+          correct,
+          difficultyLevel
+        })
+      });
+    } catch (error) {
+      console.error('Failed to track quiz attempt:', error);
+    }
+  };
+
   const checkAnswer = () => {
     if (selectedAnswer === null) return;
-    
+
+    const isCorrect = selectedAnswer === currentQuestion.correct;
     setShowResult(true);
-    if (selectedAnswer === currentQuestion.correct) {
+
+    if (isCorrect) {
       setScore(score + 1);
     }
+
     setCompletedQuestions(completedQuestions + 1);
+
+    // Track quiz attempt
+    if (currentQuestion) {
+      trackQuizAttempt(currentQuestion.id, isCorrect, currentQuestion.difficulty);
+    }
   };
 
   const nextQuestion = () => {
@@ -64,19 +209,75 @@ export function LearnPage() {
     }
   };
 
-  const progress = (completedQuestions / quizQuestions.length) * 100;
+  const progress = quizQuestions.length > 0 ? (completedQuestions / quizQuestions.length) * 100 : 0;
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen py-12 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading learning materials...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show empty state if no words
+  if (words.length === 0) {
+    return (
+      <div className="min-h-screen py-12">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <GraduationCap className="h-16 w-16 mx-auto mb-4" />
+          <h1 className="mb-4">No Learning Materials Available</h1>
+          <p className="text-muted-foreground mb-8">
+            We're currently generating learning materials for this difficulty level. Please check back soon!
+          </p>
+          <Button onClick={() => setDifficulty('beginner')}>Try Beginner Level</Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen py-12">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-12">
+        <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 border-2 border-foreground mb-4">
             <GraduationCap className="h-8 w-8" />
           </div>
           <h1 className="mb-4">{t('learn.title')}</h1>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground mb-6">
             Interactive exercises to master Sanskrit
           </p>
+
+          {/* Difficulty Selector */}
+          <div className="flex justify-center gap-2 mb-4">
+            <Button
+              variant={difficulty === 'beginner' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setDifficulty('beginner')}
+              className={difficulty === 'beginner' ? 'bg-foreground text-background' : ''}
+            >
+              Beginner
+            </Button>
+            <Button
+              variant={difficulty === 'intermediate' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setDifficulty('intermediate')}
+              className={difficulty === 'intermediate' ? 'bg-foreground text-background' : ''}
+            >
+              Intermediate
+            </Button>
+            <Button
+              variant={difficulty === 'advanced' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setDifficulty('advanced')}
+              className={difficulty === 'advanced' ? 'bg-foreground text-background' : ''}
+            >
+              Advanced
+            </Button>
+          </div>
         </div>
 
         {/* Sign Up Section - Only show if not authenticated */}
