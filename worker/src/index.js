@@ -548,11 +548,19 @@ async function processBatchResults(env, lexemes) {
       }
 
       try {
-        // Mark as checked
+        // Mark as checked and update learning fields
         await env.VAAN_LEXICON_DB.prepare(
-          "UPDATE lexemes SET baby_name_checked = 1, baby_name_suitable = ?, baby_name_gender = ? WHERE id = ?",
+          "UPDATE lexemes SET baby_name_checked = 1, baby_name_suitable = ?, baby_name_gender = ?, improved_translation = ?, example_phrase = ?, difficulty_level = ?, quiz_choices = ? WHERE id = ?",
         )
-          .bind(result.suitable ? 1 : 0, result.gender, lexeme.id)
+          .bind(
+            result.suitable ? 1 : 0,
+            result.gender,
+            result.improvedTranslation,
+            result.examplePhrase,
+            result.difficultyLevel,
+            JSON.stringify(result.quizChoices || []),
+            lexeme.id
+          )
           .run();
 
         // If suitable, add to baby_names table
@@ -563,10 +571,6 @@ async function processBatchResults(env, lexemes) {
             result.gender,
             result.story,
             result.reasoning,
-            result.improvedTranslation,
-            result.examplePhrase,
-            result.difficultyLevel,
-            result.quizChoices,
           );
         }
       } catch (error) {
@@ -719,7 +723,7 @@ function generateSlug(text, id) {
   return slug;
 }
 
-async function saveBabyName(env, lexeme, gender, story, reasoning, improvedTranslation, examplePhrase, difficultyLevel, quizChoices) {
+async function saveBabyName(env, lexeme, gender, story, reasoning) {
   const firstLetter = (lexeme.transliteration ||
     lexeme.sanskrit)[0].toUpperCase();
 
@@ -733,13 +737,10 @@ async function saveBabyName(env, lexeme, gender, story, reasoning, improvedTrans
 
   const slug = existingSlug ? `${baseSlug}-${lexeme.id}` : baseSlug;
 
-  // Convert quiz choices array to JSON string for storage
-  const quizChoicesJson = JSON.stringify(quizChoices || []);
-
   await env.VAAN_LEXICON_DB.prepare(
     `
-    INSERT INTO baby_names (name, slug, gender, meaning, pronunciation, story, reasoning, first_letter, lexeme_id, improved_translation, example_phrase, difficulty_level, quiz_choices)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO baby_names (name, slug, gender, meaning, pronunciation, story, reasoning, first_letter, lexeme_id)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
   `,
   )
     .bind(
@@ -752,10 +753,6 @@ async function saveBabyName(env, lexeme, gender, story, reasoning, improvedTrans
       reasoning,
       firstLetter,
       lexeme.id,
-      improvedTranslation,
-      examplePhrase,
-      difficultyLevel,
-      quizChoicesJson,
     )
     .run();
 
@@ -771,19 +768,18 @@ async function getBabyNameBySlug(env, slug) {
 }
 
 async function getLearningWords(env, difficulty, limit) {
-  // Fetch baby names that have been enhanced with learning data
+  // Fetch lexemes that have been enhanced with learning data
   const { results } = await env.VAAN_LEXICON_DB.prepare(
     `SELECT
       id,
-      name as sanskrit,
-      pronunciation as transliteration,
+      sanskrit,
+      transliteration,
       improved_translation,
-      meaning,
+      primary_meaning as meaning,
       example_phrase,
       difficulty_level,
-      quiz_choices,
-      story
-    FROM baby_names
+      quiz_choices
+    FROM lexemes
     WHERE difficulty_level = ?
       AND improved_translation IS NOT NULL
       AND example_phrase IS NOT NULL
