@@ -597,6 +597,15 @@ async function processBatchResults(env, lexemes) {
 }
 
 async function checkBabyNameSuitabilityBatch(env, lexemes) {
+  const startTime = Date.now();
+
+  // Log request details
+  console.log('=== Gemini API Request ===');
+  console.log(`Timestamp: ${new Date().toISOString()}`);
+  console.log(`Lexemes count: ${lexemes.length}`);
+  console.log(`Lexeme IDs: ${lexemes.map(l => l.id).join(', ')}`);
+  console.log(`Words: ${lexemes.map(l => l.sanskrit).join(', ')}`);
+
   // Static part of prompt (for caching) - instructions come first
   const systemPrompt = `You are a Sanskrit language and naming expert. Analyze the following Sanskrit words and determine if each would be suitable as a baby name.
 
@@ -632,67 +641,106 @@ Analyze these words:
 
   const fullPrompt = systemPrompt + wordsList;
 
+  console.log(`Prompt length: ${fullPrompt.length} characters`);
+
+  const requestBody = {
+    contents: [
+      {
+        parts: [{ text: fullPrompt }],
+      },
+    ],
+    generationConfig: {
+      temperature: 0.2,
+      responseMimeType: "application/json",
+      responseSchema: {
+        type: "object",
+        properties: {
+          results: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                suitable: { type: "boolean" },
+                gender: { type: "string", nullable: true },
+                reasoning: { type: "string" },
+                story: { type: "string", nullable: true },
+                improved_translation: { type: "string" },
+                example_phrase: { type: "string" },
+                difficulty_level: { type: "string" },
+                quiz_choices: {
+                  type: "array",
+                  items: { type: "string" },
+                },
+              },
+              required: ["suitable", "reasoning", "improved_translation", "example_phrase", "difficulty_level", "quiz_choices"],
+            },
+          },
+        },
+        required: ["results"],
+      },
+    },
+  };
+
   const response = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent?key=${env.GEMINI_API_KEY}`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [{ text: fullPrompt }],
-          },
-        ],
-        generationConfig: {
-          temperature: 0.2,
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: "object",
-            properties: {
-              results: {
-                type: "array",
-                items: {
-                  type: "object",
-                  properties: {
-                    suitable: { type: "boolean" },
-                    gender: { type: "string", nullable: true },
-                    reasoning: { type: "string" },
-                    story: { type: "string", nullable: true },
-                    improved_translation: { type: "string" },
-                    example_phrase: { type: "string" },
-                    difficulty_level: { type: "string" },
-                    quiz_choices: {
-                      type: "array",
-                      items: { type: "string" },
-                    },
-                  },
-                  required: ["suitable", "reasoning", "improved_translation", "example_phrase", "difficulty_level", "quiz_choices"],
-                },
-              },
-            },
-            required: ["results"],
-          },
-        },
-      }),
+      body: JSON.stringify(requestBody),
     },
   );
 
+  const responseTime = Date.now() - startTime;
+
+  // Log response details
+  console.log('=== Gemini API Response ===');
+  console.log(`Status: ${response.status} ${response.statusText}`);
+  console.log(`Response time: ${responseTime}ms`);
+
   if (!response.ok) {
     const errorText = await response.text();
-    console.error("Gemini API error:", response.status, errorText);
+    console.error("Gemini API error response:", errorText);
+    console.error(`Failed after ${responseTime}ms`);
     throw new Error(`Gemini API error: ${response.status}`);
   }
 
   const data = await response.json();
+
+  // Log response metadata
+  console.log('Response metadata:', {
+    candidatesCount: data.candidates?.length || 0,
+    usageMetadata: data.usageMetadata || {},
+    modelVersion: data.modelVersion || 'unknown',
+  });
+
+  if (data.usageMetadata) {
+    console.log(`Token usage - Prompt: ${data.usageMetadata.promptTokenCount || 0}, Candidates: ${data.usageMetadata.candidatesTokenCount || 0}, Total: ${data.usageMetadata.totalTokenCount || 0}`);
+  }
+
   const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
 
   if (!text) {
-    console.error("No response from Gemini:", JSON.stringify(data));
+    console.error("No response text from Gemini");
+    console.error("Full response data:", JSON.stringify(data, null, 2));
     throw new Error("No response from Gemini");
   }
 
+  console.log(`Response text length: ${text.length} characters`);
+
   const parsed = JSON.parse(text);
   const results = parsed.results || [];
+
+  console.log(`Parsed results count: ${results.length}`);
+  console.log('Results summary:', results.map((r, i) => ({
+    index: i,
+    lexemeId: lexemes[i]?.id,
+    word: lexemes[i]?.sanskrit,
+    suitable: r.suitable,
+    gender: r.gender,
+    difficultyLevel: r.difficulty_level,
+  })));
+  console.log(`Total processing time: ${Date.now() - startTime}ms`);
+  console.log('=== End Gemini API Call ===\n');
 
   return results.map((result) => ({
     suitable: result.suitable === true,
