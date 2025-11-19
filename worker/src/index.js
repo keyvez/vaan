@@ -38,15 +38,19 @@ export default {
 
         const names = await getBabyNames(env, gender, letter, search);
 
+
         // Process a batch of lexemes in the background (don't await)
         // This gradually builds up the baby names database
         // Prioritize the selected letter if provided
         if (env.GEMINI_API_KEY && ctx.waitUntil) {
+          console.log(`[Background] Triggering lexeme processing for letter: ${letter || 'random'}`);
           ctx.waitUntil(
             processLexemesBatch(env, letter).catch((err) => {
               console.error("Background lexeme processing failed:", err);
             }),
           );
+        } else {
+          console.log('[Background] Skipping lexeme processing - GEMINI_API_KEY or ctx.waitUntil not available');
         }
 
         return jsonResponse({ names });
