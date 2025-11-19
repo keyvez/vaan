@@ -316,35 +316,57 @@ export function LearnPage() {
           <TabsContent value="flashcards">
             <div className="space-y-6">
               {/* Flashcard */}
-              <Card
-                className="relative h-80 cursor-pointer transition-all duration-500 hover:border-foreground"
+              <div
+                className="relative h-80 cursor-pointer"
                 onClick={handleFlip}
-                style={{
-                  transformStyle: 'preserve-3d',
-                  transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)'
-                }}
+                style={{ perspective: '1000px' }}
               >
-                <div className="absolute inset-0 p-8 flex flex-col items-center justify-center">
-                  {!isFlipped ? (
-                    <div className="text-center">
-                      <p className="text-sm text-muted-foreground mb-4">Sanskrit</p>
-                      <h2 className="text-5xl mb-4">{currentFlashcard.sanskrit}</h2>
-                      <p className="text-xl text-muted-foreground">
-                        {currentFlashcard.transliteration}
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="text-center" style={{ transform: 'rotateY(180deg)' }}>
-                      <p className="text-sm text-muted-foreground mb-4">English Meaning</p>
-                      <h2 className="text-3xl">{currentFlashcard.meaning}</h2>
-                    </div>
-                  )}
+                <div
+                  className="relative w-full h-full transition-transform duration-500"
+                  style={{
+                    transformStyle: 'preserve-3d',
+                    transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
+                  }}
+                >
+                  {/* Front Face */}
+                  <div
+                    className="absolute w-full h-full"
+                    style={{ backfaceVisibility: 'hidden' }}
+                  >
+                    <Card className="w-full h-full flex flex-col items-center justify-center">
+                      <div className="text-center">
+                        <p className="text-sm text-muted-foreground mb-4">Sanskrit</p>
+                        <h2 className="text-5xl mb-4">{currentFlashcard.sanskrit}</h2>
+                        <p className="text-xl text-muted-foreground">
+                          {currentFlashcard.transliteration}
+                        </p>
+                      </div>
+                      <div className="absolute bottom-4 right-4">
+                        <RotateCw className="h-5 w-5 text-muted-foreground" />
+                      </div>
+                    </Card>
+                  </div>
+
+                  {/* Back Face */}
+                  <div
+                    className="absolute w-full h-full"
+                    style={{
+                      transform: 'rotateY(180deg)',
+                      backfaceVisibility: 'hidden',
+                    }}
+                  >
+                    <Card className="w-full h-full flex items-center justify-center">
+                      <div className="text-center">
+                        <p className="text-sm text-muted-foreground mb-4">English Meaning</p>
+                        <h2 className="text-3xl">{currentFlashcard.meaning}</h2>
+                      </div>
+                      <div className="absolute bottom-4 right-4">
+                        <RotateCw className="h-5 w-5 text-muted-foreground" />
+                      </div>
+                    </Card>
+                  </div>
                 </div>
-                
-                <div className="absolute bottom-4 right-4">
-                  <RotateCw className="h-5 w-5 text-muted-foreground" />
-                </div>
-              </Card>
+              </div>
 
               {/* Controls */}
               <div className="flex justify-between items-center">
