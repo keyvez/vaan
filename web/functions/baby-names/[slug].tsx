@@ -3,6 +3,12 @@ export async function onRequest(context) {
   const { params, request } = context;
   const { slug } = params;
 
+  // If slug is a single letter, it's a category page, not a specific name
+  // Serve index.html for SPA to handle
+  if (slug.length === 1) {
+    return context.env.ASSETS.fetch(new URL('/index.html', request.url));
+  }
+
   // Fetch baby name data
   let nameData;
   try {
@@ -15,8 +21,8 @@ export async function onRequest(context) {
   }
 
   if (!nameData) {
-    // Return 404 or redirect to baby names page
-    return new Response('Not found', { status: 404 });
+    // If name not found, serve index.html for SPA to handle (could be a client-side 404 or other route)
+    return context.env.ASSETS.fetch(new URL('/index.html', request.url));
   }
 
   // Use pronunciation as fallback if name is empty
