@@ -112,8 +112,11 @@ The system uses a carefully crafted prompt to guide Gemini's analysis:
 You are a Sanskrit language and naming expert. Analyze the following Sanskrit word
 and determine if it would be suitable as a baby name.
 
+IMPORTANT: The Sanskrit words provided may contain OCR (Optical Character Recognition)
+errors. Please carefully examine each Sanskrit word for potential OCR mistakes and
+provide a corrected spelling if needed.
+
 Sanskrit Word: [word]
-Transliteration: [transliteration]
 English Meaning: [meaning]
 
 Respond in JSON format with:
@@ -121,7 +124,45 @@ Respond in JSON format with:
 - gender: boy/girl/unisex (if suitable)
 - reasoning: why it is or isn't suitable
 - story: cultural/mythological context (if suitable)
+- improved_translation: improved English translation
+- example_phrase: simple Sanskrit phrase using this word
+- difficulty_level: beginner/intermediate/advanced
+- quiz_choices: array of 3 incorrect meanings for quizzes
+- corrected_sanskrit: corrected Devanagari spelling if OCR errors detected
 ```
+
+## OCR Error Correction
+
+The system now includes automatic OCR error detection and correction:
+
+### How It Works
+1. **Detection**: Gemini analyzes each Sanskrit word for potential OCR errors by:
+   - Examining Devanagari characters for malformations
+   - Checking if the word makes sense given the English meaning
+   - Looking for common OCR mistakes in Sanskrit text
+
+2. **Correction**: If errors are detected:
+   - Gemini suggests the correct Devanagari spelling
+   - The corrected spelling is stored in `lexemes.corrected_sanskrit`
+   - Baby names use the corrected spelling when available
+   - Logs clearly indicate when corrections are made
+
+3. **Storage**:
+   - Original Sanskrit: kept in `lexemes.sanskrit` (for reference)
+   - Corrected Sanskrit: stored in `lexemes.corrected_sanskrit`
+   - Baby names table uses corrected version if available
+
+### Example
+```
+Original (OCR error):  रुक्मिन
+Corrected:             रुक्मिणी
+Meaning:              Golden, radiant
+```
+
+The system will:
+- Log: "Sanskrit corrections detected (1): [original: रुक्मिन, corrected: रुक्मिणी]"
+- Save corrected_sanskrit to database
+- Use रुक्मिणी in baby_names table
 
 ## Future Enhancements
 

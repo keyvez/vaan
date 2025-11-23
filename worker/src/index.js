@@ -554,7 +554,7 @@ async function processBatchResults(env, lexemes) {
       try {
         // Mark as checked and update learning fields
         await env.VAAN_LEXICON_DB.prepare(
-          "UPDATE lexemes SET baby_name_checked = 1, baby_name_suitable = ?, baby_name_gender = ?, improved_translation = ?, example_phrase = ?, difficulty_level = ?, quiz_choices = ? WHERE id = ?",
+          "UPDATE lexemes SET baby_name_checked = 1, baby_name_suitable = ?, baby_name_gender = ?, improved_translation = ?, example_phrase = ?, difficulty_level = ?, quiz_choices = ?, corrected_sanskrit = ? WHERE id = ?",
         )
           .bind(
             result.suitable ? 1 : 0,
@@ -563,6 +563,7 @@ async function processBatchResults(env, lexemes) {
             result.examplePhrase,
             result.difficultyLevel,
             JSON.stringify(result.quizChoices || []),
+            result.correctedSanskrit,
             lexeme.id
           )
           .run();
@@ -575,6 +576,7 @@ async function processBatchResults(env, lexemes) {
             result.gender,
             result.story,
             result.reasoning,
+            result.correctedSanskrit,
           );
         }
       } catch (error) {
@@ -613,6 +615,8 @@ async function checkBabyNameSuitabilityBatch(env, lexemes) {
   // Static part of prompt (for caching) - instructions come first
   const systemPrompt = `You are a Sanskrit language and naming expert. Analyze the following Sanskrit words and determine if each would be suitable as a baby name.
 
+IMPORTANT: The Sanskrit words provided may contain OCR (Optical Character Recognition) errors. Please carefully examine each Sanskrit word for potential OCR mistakes and provide a corrected spelling if needed.
+
 For each word, respond with:
 - suitable: boolean (true if this would make a good baby name)
 - gender: string ("boy", "girl", or "unisex") - only if suitable is true, otherwise null
@@ -622,6 +626,7 @@ For each word, respond with:
 - example_phrase: string (provide a simple Sanskrit phrase or sentence where this word is commonly used, with English translation)
 - difficulty_level: string ("beginner", "intermediate", or "advanced") - for Sanskrit learners
 - quiz_choices: array of 3 strings (3 plausible but incorrect meanings for multiple choice quiz)
+- corrected_sanskrit: string (if the Sanskrit word appears to have OCR errors, provide the corrected Devanagari spelling; otherwise set to null)
 
 Criteria for suitability:
 1. The word should have a positive or neutral meaning
@@ -634,6 +639,7 @@ Criteria for suitability:
 For the improved_translation, provide a translation that is more precise and captures cultural/spiritual nuances.
 For the example_phrase, use simple Sanskrit like "सः/सा [word] अस्ति" or provide a common usage from texts.
 For quiz_choices, make them plausible wrong answers that test understanding.
+For corrected_sanskrit, check if the provided Sanskrit word has obvious OCR errors (e.g., wrong Devanagari characters, malformed characters, incorrect diacritics in transliteration that suggest OCR mistakes). If you detect errors, provide the correct Devanagari spelling. Use the English meaning as a guide to determine the intended word.
 
 Analyze these words:
 `;
@@ -675,6 +681,7 @@ Analyze these words:
                   type: "array",
                   items: { type: "string" },
                 },
+                corrected_sanskrit: { type: "string", nullable: true },
               },
               required: ["suitable", "reasoning", "improved_translation", "example_phrase", "difficulty_level", "quiz_choices"],
             },
@@ -742,7 +749,18 @@ Analyze these words:
     suitable: r.suitable,
     gender: r.gender,
     difficultyLevel: r.difficulty_level,
+    correctedSanskrit: r.corrected_sanskrit,
   })));
+
+  // Log any Sanskrit corrections
+  const corrections = results.filter(r => r.corrected_sanskrit).map((r, i) => ({
+    lexemeId: lexemes[i]?.id,
+    original: lexemes[i]?.sanskrit,
+    corrected: r.corrected_sanskrit,
+  }));
+  if (corrections.length > 0) {
+    console.log(`Sanskrit corrections detected (${corrections.length}):`, corrections);
+  }
   console.log(`Total processing time: ${Date.now() - startTime}ms`);
   console.log('=== End Gemini API Call ===\n');
 
@@ -754,6 +772,7 @@ Analyze these words:
     examplePhrase: result.example_phrase || null,
     difficultyLevel: result.difficulty_level || null,
     quizChoices: result.quiz_choices || [],
+    correctedSanskrit: result.corrected_sanskrit || null,
     reasoning: result.reasoning || "No reasoning provided",
   }));
 }
@@ -775,12 +794,15 @@ function generateSlug(text, id) {
   return slug;
 }
 
-async function saveBabyName(env, lexeme, gender, story, reasoning) {
+async function saveBabyName(env, lexeme, gender, story, reasoning, correctedSanskrit = null) {
+  // Use corrected Sanskrit if available, otherwise use original
+  const sanskritToUse = correctedSanskrit || lexeme.sanskrit;
+
   const firstLetter = (lexeme.transliteration ||
-    lexeme.sanskrit)[0].toUpperCase();
+    sanskritToUse)[0].toUpperCase();
 
   // Generate slug from transliteration (preferred) or fallback to id-based
-  const baseSlug = generateSlug(lexeme.transliteration || lexeme.sanskrit, lexeme.id);
+  const baseSlug = generateSlug(lexeme.transliteration || sanskritToUse, lexeme.id);
 
   // Check if slug exists, if so append lexeme id
   const existingSlug = await env.VAAN_LEXICON_DB.prepare(
@@ -796,11 +818,11 @@ async function saveBabyName(env, lexeme, gender, story, reasoning) {
   `,
   )
     .bind(
-      lexeme.sanskrit,
+      sanskritToUse,
       slug,
       gender,
       lexeme.primary_meaning,
-      lexeme.transliteration || lexeme.sanskrit,
+      lexeme.transliteration || sanskritToUse,
       story,
       reasoning,
       firstLetter,
@@ -808,7 +830,11 @@ async function saveBabyName(env, lexeme, gender, story, reasoning) {
     )
     .run();
 
-  console.log(`Added baby name: ${lexeme.sanskrit} (${gender}) - slug: ${slug}`);
+  if (correctedSanskrit) {
+    console.log(`Added baby name: ${sanskritToUse} (${gender}) - slug: ${slug} [CORRECTED from: ${lexeme.sanskrit}]`);
+  } else {
+    console.log(`Added baby name: ${sanskritToUse} (${gender}) - slug: ${slug}`);
+  }
 }
 
 async function getBabyNameBySlug(env, slug) {
