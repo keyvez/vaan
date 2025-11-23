@@ -1,0 +1,6 @@
+name = "vaan-web"
+compatibility_date = "2024-01-01"
+pages_build_output_dir = "build"
+
+[vars]
+VITE_GOOGLE_CLIENT_ID = "80926452215-u2jntnjt1v9jeasi19n4db3335cv5lq5.apps.googleusercontent.com"
