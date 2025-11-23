@@ -26,7 +26,7 @@ import {
 export function Header() {
   const { t } = useTranslation();
   const { theme, setTheme, font, setFont, language, setLanguage } = usePreferences();
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, isAuthenticated, logout, login } = useAuth();
   const location = useLocation();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const isSupporter = localStorage.getItem('is_sanskrit_supporter') === 'true';
@@ -124,128 +124,132 @@ export function Header() {
             </Popover>
 
             {/* User Profile Menu */}
-            {isAuthenticated && user && (
-              <div style={{ position: 'relative' }}>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="rounded-full"
-                  onClick={() => setShowUserMenu(!showUserMenu)}
-                >
-                  {user.picture ? (
-                    <img
-                      src={user.picture}
-                      alt={user.name}
-                      className="h-8 w-8 rounded-full"
-                    />
-                  ) : (
-                    <User className="h-5 w-5" />
-                  )}
-                </Button>
+            <div style={{ position: 'relative' }}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="rounded-full"
+                onClick={() => {
+                  if (isAuthenticated) {
+                    setShowUserMenu(!showUserMenu);
+                  } else {
+                    login();
+                  }
+                }}
+              >
+                {isAuthenticated && user?.picture ? (
+                  <img
+                    src={user.picture}
+                    alt={user.name}
+                    className="h-8 w-8 rounded-full"
+                  />
+                ) : (
+                  <User className="h-5 w-5" />
+                )}
+              </Button>
 
-                {showUserMenu && (
-                  <>
-                    <div
-                      style={{
-                        position: 'fixed',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        zIndex: 40
-                      }}
+              {isAuthenticated && showUserMenu && (
+                <>
+                  <div
+                    style={{
+                      position: 'fixed',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      zIndex: 40
+                    }}
+                    onClick={() => setShowUserMenu(false)}
+                  />
+                  <div
+                    style={{
+                      position: 'absolute',
+                      right: 0,
+                      top: '100%',
+                      marginTop: '8px',
+                      width: '224px',
+                      backgroundColor: 'var(--background)',
+                      border: '1px solid var(--border)',
+                      borderRadius: '8px',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                      zIndex: 50,
+                      overflow: 'hidden'
+                    }}
+                  >
+                    <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>
+                      <p style={{ fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>{user?.name}</p>
+                      <p style={{ fontSize: '12px', color: 'var(--muted-foreground)', marginBottom: isSupporter ? '8px' : '0' }}>{user?.email}</p>
+                      {isSupporter && (
+                        <div style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          padding: '4px 8px',
+                          backgroundColor: 'rgba(255, 165, 0, 0.1)',
+                          border: '1px solid rgba(255, 165, 0, 0.3)',
+                          borderRadius: '4px',
+                          fontSize: '11px',
+                          fontWeight: 500,
+                          color: 'rgba(255, 140, 0, 1)'
+                        }}>
+                          <Heart style={{ width: '12px', height: '12px', fill: 'currentColor' }} />
+                          <span>Sanskrit Supporter</span>
+                        </div>
+                      )}
+                    </div>
+                    <Link
+                      to="/account"
                       onClick={() => setShowUserMenu(false)}
-                    />
-                    <div
                       style={{
-                        position: 'absolute',
-                        right: 0,
-                        top: '100%',
-                        marginTop: '8px',
-                        width: '224px',
-                        backgroundColor: 'var(--background)',
-                        border: '1px solid var(--border)',
-                        borderRadius: '8px',
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                        zIndex: 50,
-                        overflow: 'hidden'
+                        width: '100%',
+                        padding: '12px 16px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        textDecoration: 'none',
+                        fontSize: '14px',
+                        color: 'var(--foreground)',
+                        borderBottom: '1px solid var(--border)'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = 'var(--muted)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent';
                       }}
                     >
-                      <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>
-                        <p style={{ fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>{user.name}</p>
-                        <p style={{ fontSize: '12px', color: 'var(--muted-foreground)', marginBottom: isSupporter ? '8px' : '0' }}>{user.email}</p>
-                        {isSupporter && (
-                          <div style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                            padding: '4px 8px',
-                            backgroundColor: 'rgba(255, 165, 0, 0.1)',
-                            border: '1px solid rgba(255, 165, 0, 0.3)',
-                            borderRadius: '4px',
-                            fontSize: '11px',
-                            fontWeight: 500,
-                            color: 'rgba(255, 140, 0, 1)'
-                          }}>
-                            <Heart style={{ width: '12px', height: '12px', fill: 'currentColor' }} />
-                            <span>Sanskrit Supporter</span>
-                          </div>
-                        )}
-                      </div>
-                      <Link
-                        to="/account"
-                        onClick={() => setShowUserMenu(false)}
-                        style={{
-                          width: '100%',
-                          padding: '12px 16px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          textDecoration: 'none',
-                          fontSize: '14px',
-                          color: 'var(--foreground)',
-                          borderBottom: '1px solid var(--border)'
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.backgroundColor = 'var(--muted)';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.backgroundColor = 'transparent';
-                        }}
-                      >
-                        <User style={{ marginRight: '8px', width: '16px', height: '16px' }} />
-                        <span>My Account</span>
-                      </Link>
-                      <button
-                        onClick={() => {
-                          logout();
-                          setShowUserMenu(false);
-                        }}
-                        style={{
-                          width: '100%',
-                          padding: '12px 16px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          border: 'none',
-                          background: 'none',
-                          cursor: 'pointer',
-                          fontSize: '14px',
-                          color: 'var(--foreground)'
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.backgroundColor = 'var(--muted)';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.backgroundColor = 'transparent';
-                        }}
-                      >
-                        <LogOut style={{ marginRight: '8px', width: '16px', height: '16px' }} />
-                        <span>Log out</span>
-                      </button>
-                    </div>
-                  </>
-                )}
-              </div>
-            )}
+                      <User style={{ marginRight: '8px', width: '16px', height: '16px' }} />
+                      <span>My Account</span>
+                    </Link>
+                    <button
+                      onClick={() => {
+                        logout();
+                        setShowUserMenu(false);
+                      }}
+                      style={{
+                        width: '100%',
+                        padding: '12px 16px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        border: 'none',
+                        background: 'none',
+                        cursor: 'pointer',
+                        fontSize: '14px',
+                        color: 'var(--foreground)'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = 'var(--muted)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                      }}
+                    >
+                      <LogOut style={{ marginRight: '8px', width: '16px', height: '16px' }} />
+                      <span>Log out</span>
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
 
             {/* Theme Toggle */}
             <Button
