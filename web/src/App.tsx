@@ -5,6 +5,7 @@ import { I18nextProvider } from 'react-i18next';
 import i18n from './lib/i18n';
 import { PreferencesProvider, usePreferences } from './lib/preferences-context';
 import { AuthProvider } from './lib/auth-context';
+import { AdminProvider } from './lib/admin-context';
 import { Header } from './components/Header';
 import { HomePage } from './components/HomePage';
 import { TranslatePage } from './components/TranslatePage';
@@ -17,7 +18,23 @@ import { LearnPage } from './components/LearnPage';
 import { AICompanionPage } from './components/AICompanionPage';
 import { DonatePage } from './components/DonatePage';
 import { AccountPage } from './components/AccountPage';
+import { VideosPage } from './components/VideosPage';
+import { BlogPage } from './components/BlogPage';
+import { NewsPage } from './components/NewsPage';
 import { Toaster } from './components/ui/sonner';
+import { AdminGuard } from './components/AdminGuard';
+import { AdminLayout } from './components/AdminLayout';
+import { AdminDashboard } from './components/admin/AdminDashboard';
+import { AdminVideos } from './components/admin/AdminVideos';
+import { AdminBlog } from './components/admin/AdminBlog';
+import { AdminNews } from './components/admin/AdminNews';
+import {
+  AdminLexicon,
+  AdminBabyNames,
+  AdminDailyWords,
+  AdminUsers,
+  AdminTranslations
+} from './components/admin/AdminPlaceholderPages';
 
 function AppContent() {
   const { font } = usePreferences();
@@ -40,21 +57,51 @@ function AppContent() {
   return (
     <BrowserRouter>
       <div className="min-h-screen bg-background text-foreground">
-        <Header />
-        <main>
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/translate" element={<TranslatePage />} />
-            <Route path="/baby-names" element={<BabyNamesPage />} />
-            <Route path="/baby-names/:letter" element={<BabyNamesRouter />} />
-            <Route path="/leaderboard" element={<LeaderboardPage />} />
-            <Route path="/daily-word" element={<DailyWordPage />} />
-            <Route path="/learn" element={<LearnPage />} />
-            <Route path="/ai-companion" element={<AICompanionPage />} />
-            <Route path="/donate" element={<DonatePage />} />
-            <Route path="/account" element={<AccountPage />} />
-          </Routes>
-        </main>
+        <Routes>
+          {/* Admin Routes */}
+          <Route path="/admin/*" element={
+            <AdminGuard>
+              <AdminLayout>
+                <Routes>
+                  <Route path="dashboard" element={<AdminDashboard />} />
+                  <Route path="lexicon" element={<AdminLexicon />} />
+                  <Route path="baby-names" element={<AdminBabyNames />} />
+                  <Route path="daily-words" element={<AdminDailyWords />} />
+                  <Route path="videos" element={<AdminVideos />} />
+                  <Route path="blog" element={<AdminBlog />} />
+                  <Route path="news" element={<AdminNews />} />
+                  <Route path="users" element={<AdminUsers />} />
+                  <Route path="translations" element={<AdminTranslations />} />
+                  <Route path="*" element={<AdminDashboard />} />
+                </Routes>
+              </AdminLayout>
+            </AdminGuard>
+          } />
+
+          {/* Public Routes */}
+          <Route path="*" element={
+            <>
+              <Header />
+              <main>
+                <Routes>
+                  <Route path="/" element={<HomePage />} />
+                  <Route path="/translate" element={<TranslatePage />} />
+                  <Route path="/baby-names" element={<BabyNamesPage />} />
+                  <Route path="/baby-names/:letter" element={<BabyNamesRouter />} />
+                  <Route path="/leaderboard" element={<LeaderboardPage />} />
+                  <Route path="/daily-word" element={<DailyWordPage />} />
+                  <Route path="/learn" element={<LearnPage />} />
+                  <Route path="/ai-companion" element={<AICompanionPage />} />
+                  <Route path="/videos" element={<VideosPage />} />
+                  <Route path="/blog" element={<BlogPage />} />
+                  <Route path="/news" element={<NewsPage />} />
+                  <Route path="/donate" element={<DonatePage />} />
+                  <Route path="/account" element={<AccountPage />} />
+                </Routes>
+              </main>
+            </>
+          } />
+        </Routes>
 
         {/* Footer */}
         <footer className="border-t border-border mt-20">
@@ -138,9 +185,11 @@ export default function App() {
     <HelmetProvider>
       <I18nextProvider i18n={i18n}>
         <AuthProvider>
-          <PreferencesProvider>
-            <AppContent />
-          </PreferencesProvider>
+          <AdminProvider>
+            <PreferencesProvider>
+              <AppContent />
+            </PreferencesProvider>
+          </AdminProvider>
         </AuthProvider>
       </I18nextProvider>
     </HelmetProvider>
